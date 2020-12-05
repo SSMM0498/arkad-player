@@ -1,2 +1,2 @@
 # arkad-player
-Arkad core player
+Arkad core replayer for replaying the arkast by simulating all the recorded event
