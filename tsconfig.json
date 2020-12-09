@@ -7,7 +7,7 @@
       "removeComments": true,
       "preserveConstEnums": true,
       "sourceMap": false,
-      "rootDir": "src",
+      "rootDir": "../",
       "outDir": "build",
       "lib": ["es6", "dom"],
       "downlevelIteration": true
