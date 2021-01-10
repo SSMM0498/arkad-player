@@ -7,12 +7,11 @@ import {
 } from '../../../recorder/src/NodeCaptor/types'
 import { parse } from './utils'
 
-type tagMap = {
-    [key: string]: string
-}
-
+/**
+ * Class for rebuild a DOM from a captured node
+ */
 class NodeBuilder {
-    private readonly elementsNameAdapter: tagMap = {
+    private readonly svgTagToCamel: { [key: string]: string } = {
         script: 'noscript',
         // camel case svg element tag names
         altglyph: 'altGlyph',
@@ -59,11 +58,17 @@ class NodeBuilder {
         this.iframeElement = iframe
     }
 
-    private adaptHoverStyle(cssText: string): string {
+    /**
+     * change all hover rule in cssText to a class named .:hover
+     * @param cssText a css text
+     */
+    private changeHoverStyle(cssText: string): string {
         const ast = parse(cssText, { silent: true })
+
         if (!ast.stylesheet) {
             return cssText
         }
+
         ast.stylesheet.rules.forEach((rule) => {
             if ('selectors' in rule) {
                 ; (rule.selectors || []).forEach((selector: string) => {
@@ -83,24 +88,43 @@ class NodeBuilder {
         return cssText
     }
 
+    /**
+     * return the real tag name 
+     ** retrieve camel case form for svg tag name
+     ** change link tag to style tag
+     * @param n a node element
+     */
     private getTagName(n: ElementNode): string {
-        let tagName = this.elementsNameAdapter[n.ElementName] ? this.elementsNameAdapter[n.ElementName] : n.ElementName
+        let tagName = this.svgTagToCamel[n.ElementName] ? this.svgTagToCamel[n.ElementName] : n.ElementName
         if (tagName === 'link' && n.attributes._cssText) {
             tagName = 'style'
         }
         return tagName
     }
 
+    /**
+     * rebuild iframe DOM
+     ** browse each of the nodes, build it the iframe
+     * @param childNodes all nodes of the iframe
+     * @param map the map of those nodes
+     */
     private buildIframe(
         childNodes: NodeCaptured[],
         map: DocumentNodesMap,
     ) {
         const targetDoc = this.iframeElement.contentDocument!;
         for (const childN of childNodes) {
-            this.buildNodeMap(childN, map, targetDoc);
+            this.buildAllNodes(childN, map, targetDoc);
         }
     }
 
+    /**
+     * rebuild a node from captured node
+     ** in case the node is an element create it and add each of those attributes
+     ** if the node is a text, create it while changing, for css rules the hover selector
+     * @param currentNode the current node to build
+     * @param doc the container for that node
+     */
     public buildNode(
         currentNode: NodeCaptured,
         doc: Document
@@ -112,14 +136,14 @@ class NodeBuilder {
                 node = doc.createElement(tagName);
 
                 for (const name in currentNode.attributes) {
-                    // attribute names start with rr_ are internal attributes added by rrweb
-                    if (currentNode.attributes.hasOwnProperty(name) && !name.startsWith('__')) {
+                    // attribute names start with _ are internal attributes added by the core
+                    if (currentNode.attributes.hasOwnProperty(name) && !name.startsWith('_')) {
                         let value = currentNode.attributes[name];
                         value = typeof value === 'boolean' ? '' : value;
                         const isTextarea = tagName === 'textarea' && name === 'value';
                         const isExternalOrInternalCss = tagName === 'style' && name === '_cssText';
                         if (isExternalOrInternalCss) {
-                            value = this.adaptHoverStyle(value as string);
+                            value = this.changeHoverStyle(value as string);
                         }
                         if (isTextarea || isExternalOrInternalCss) {
                             const child = doc.createTextNode(value as string);
@@ -147,44 +171,54 @@ class NodeBuilder {
 
                 return node;
             case NodeType.Text:
-                return doc.createTextNode(
-                    currentNode.isCSSRules ? this.adaptHoverStyle(currentNode.textContent) : currentNode.textContent,
-                );
+                let textContent = currentNode.textContent
+                if (currentNode.isCSSRules) {
+                    textContent = this.changeHoverStyle(currentNode.textContent)
+                }
+                return doc.createTextNode(textContent);
             default:
                 return null;
         }
     }
 
-    public buildNodeMap(
-        currentNode: NodeCaptured,
+    /**
+     * rebuild all nodes of a tree from the root node
+     ** build the root node
+     ** build recursively the child nodes of that node
+     * @param rootNode root node
+     * @param map node as a map
+     * @param doc the document root
+     */
+    public buildAllNodes(
+        rootNode: NodeCaptured,
         map: DocumentNodesMap,
         doc: Document
     ): [NodeFormated | null, NodeCaptured[]] {
-        let node = this.buildNode(currentNode, doc);
+        let node = this.buildNode(rootNode, doc);
         if (!node) {
-            return [null, [currentNode]]; // TODO: Check this
+            return [null, [rootNode]]; // TODO: Check this
         }
         //  TODO: Check this
-        if (currentNode.originId) {
+        if (rootNode.originId) {
             console.assert(
-                ((map[currentNode.originId] as unknown) as Document) === doc,
+                ((map[rootNode.originId] as unknown) as Document) === doc,
                 'Target document should has the same root id',
             );
         }
         // use target document as root document
 
-        (node as NodeFormated)._fnode = currentNode;
-        map[currentNode.nodeId] = node as NodeFormated;
+        (node as NodeFormated)._fnode = rootNode;
+        map[rootNode.nodeId] = node as NodeFormated;
 
         if (
-            currentNode.type === NodeType.Element
+            rootNode.type === NodeType.Element
         ) {
-            const nodeIsIframe = isIframe(currentNode);
+            const nodeIsIframe = isIframe(rootNode);
             if (nodeIsIframe) {
-                return [node as NodeFormated, currentNode.childNodes];
+                return [node as NodeFormated, rootNode.childNodes];
             }
-            for (const childN of currentNode.childNodes) {
-                const [childNode, nestedNodes] = this.buildNodeMap(childN, map, doc);
+            for (const childN of rootNode.childNodes) {
+                const [childNode, nestedNodes] = this.buildAllNodes(childN, map, doc);
                 if (!childNode) {
                     console.warn('Failed to rebuild', childN);
                     continue;
@@ -207,16 +241,25 @@ class NodeBuilder {
         return [node as NodeFormated, []];
     }
 
+    /**
+     * launch a build process
+     * @param n root node
+     * @param doc the document
+     */
     public build(
         n: NodeCaptured,
         doc: Document
     ): [Node | null, DocumentNodesMap] {
         const DocumentNodesMap: DocumentNodesMap = {}
-        const [node] = this.buildNodeMap(n, DocumentNodesMap, doc)
+        const [node] = this.buildAllNodes(n, DocumentNodesMap, doc)
         return [node, DocumentNodesMap]
     }
 }
 
+/**
+ * check if this node is an iframe
+ * @param n a captured node
+ */
 function isIframe(n: NodeCaptured) {
     return n.type === NodeType.Element && n.ElementName === 'iframe';
 }
