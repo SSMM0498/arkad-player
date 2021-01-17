@@ -2,8 +2,8 @@ import { viewportResizeDimention } from "./types";
 
 class PlayerDOM {
     public wrapper: HTMLDivElement;
-    public iframe: HTMLIFrameElement;
-    public mouse: HTMLDivElement;
+    public iframe!: HTMLIFrameElement;
+    public mouse!: HTMLDivElement;
 
     constructor(w: HTMLDivElement) {
         this.wrapper = w
