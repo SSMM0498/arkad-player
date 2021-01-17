@@ -5,14 +5,14 @@ import {
 } from '../../../recorder/src/Recorder/types';
 import { actionWithDelay } from './types';
 
-export class Timer {
+export class actionsBufferHandler {
     public timeOffset: number = 0;
 
-    private actions: actionWithDelay[];
+    private actionsBuffer: actionWithDelay[];
     private raf: number | null = null;
 
     constructor(actions: actionWithDelay[] = []) {
-        this.actions = actions;
+        this.actionsBuffer = actions;
     }
     /**
      * Add an action after the timer starts.
@@ -20,21 +20,22 @@ export class Timer {
      */
     public addAction(action: actionWithDelay) {
         const index = this.findActionIndex(action);
-        this.actions.splice(index, 0, action);
+        this.actionsBuffer.splice(index, 0, action);
     }
+
     /**
      * Add all actions before the timer starts
      * @param actions
      */
     public addActions(actions: actionWithDelay[]) {
-        this.actions.push(...actions);
+        this.actionsBuffer.push(...actions);
     }
 
     public start() {
-        this.actions.sort((a1, a2) => a1.delay - a2.delay);
+        this.actionsBuffer.sort((a1, a2) => a1.delay - a2.delay);
         this.timeOffset = 0;
         let lastTimestamp = performance.now();
-        const { actions } = this;
+        const { actionsBuffer: actions } = this;
         const self = this;
         function check(time: number) {
             self.timeOffset += time - lastTimestamp;
@@ -60,7 +61,7 @@ export class Timer {
             cancelAnimationFrame(this.raf);
             this.raf = null;
         }
-        this.actions.length = 0;
+        this.actionsBuffer.length = 0;
     }
 
     public isActive() {
@@ -69,12 +70,12 @@ export class Timer {
 
     private findActionIndex(action: actionWithDelay): number {
         let start = 0;
-        let end = this.actions.length - 1;
+        let end = this.actionsBuffer.length - 1;
         while (start <= end) {
             let mid = Math.floor((start + end) / 2);
-            if (this.actions[mid].delay < action.delay) {
+            if (this.actionsBuffer[mid].delay < action.delay) {
                 start = mid + 1;
-            } else if (this.actions[mid].delay > action.delay) {
+            } else if (this.actionsBuffer[mid].delay > action.delay) {
                 end = mid - 1;
             } else {
                 return mid;

@@ -15,10 +15,9 @@ import {
     metaEvent,
 } from "../../../recorder/src/Recorder/types";
 import * as mittProxy from 'mitt';
-import NodeCaptor from "../../../recorder/src/NodeCaptor/NodeCaptor";
 import { mirror } from "../../../recorder/src/Recorder/utils";
 import NodeBuilder from "../NodeBuilder/NodeBuilder";
-import { Timer } from './Timer';
+import { actionsBufferHandler } from './Timer';
 import { createPlayerService } from '../StateMachine/PlayerStateMachine';
 import { Handler, missingNodeMap, playerMetaData, viewportResizeDimention, actionWithDelay, missingNode, ReplayerEvents, Emitter, ElementState } from "./types";
 import { iterateResolveTree, queueToResolveTrees, TreeIndex, warnNodeNotFound } from "./utils";
@@ -28,14 +27,14 @@ import PlayerDOM from "./PlayerDOM";
 const mitt = (mittProxy as any).default || mittProxy;
 
 class Player {
-    public dom: PlayerDOM
+    public dom!: PlayerDOM;
 
     private events: eventWithTime[] = [];
 
-    private NodeBuilder: NodeBuilder;
+    private NodeBuilder!: NodeBuilder;
 
-    private lastPlayedEvent: eventWithTime;
-    private timer: Timer;
+    private lastPlayedEvent!: eventWithTime;
+    private actionsBufferHandler!: actionsBufferHandler;
     private loadTimeout: number = 10 * 1000;
 
     private legacy_missingNodeRetryMap: missingNodeMap = {};
@@ -123,19 +122,17 @@ class Player {
         this.dom = new PlayerDOM(w)
         this.dom.setupDom()
         this.NodeBuilder = new NodeBuilder(this.dom.iframe);
-        this.timer = new Timer();
+        this.actionsBufferHandler = new actionsBufferHandler();
         this.service = createPlayerService(
             {
                 events: this.events,
-                timer: this.timer,
+                timer: this.actionsBufferHandler,
                 timeOffset: 0,
                 baselineTime: 0,
                 lastPlayedEvent: null,
             },
-            {
-                getCastFn: this.getCastFn,
-                emitter: this.emitter,
-            }
+            this.getCastFn,
+            this.emitter
         );
         this.service.start();
         this.service.subscribe((state) => {
@@ -163,7 +160,7 @@ class Player {
         }
         this.dom.iframe.contentDocument
             ?.getElementsByTagName('html')[0]
-            .classList.remove('rrweb-paused');
+            .classList.remove('player-paused');
         this.emitter.emit(ReplayerEvents.Start);
     }
 
@@ -177,7 +174,7 @@ class Player {
         }
         this.dom.iframe.contentDocument
             ?.getElementsByTagName('html')[0]
-            .classList.add('rrweb-paused');
+            .classList.add('player-paused');
         this.emitter.emit(ReplayerEvents.Pause);
     }
 
@@ -203,7 +200,7 @@ class Player {
     }
 
     public getCurrentTime(): number {
-        return this.timer.timeOffset + this.getTimeOffset();
+        return this.actionsBufferHandler.timeOffset + this.getTimeOffset();
     }
 
     public getTimeOffset(): number {
@@ -237,7 +234,6 @@ class Player {
         }
 
         const wrappedCastFn = () => {
-            ``
             if (castFn) {
                 castFn();
             }
@@ -280,7 +276,7 @@ class Player {
         if (!this.service.state.matches('playing')) {
             this.dom.iframe.contentDocument
                 .getElementsByTagName('html')[0]
-                .classList.add('rrweb-paused');
+                .classList.add('player-paused');
         }
 
         this.emitter.emit(ReplayerEvents.FullCaptureRebuilded);
@@ -374,10 +370,10 @@ class Player {
                                 e.timestamp -
                                 this.service.state.context.baselineTime,
                         };
-                        this.timer.addAction(action);
+                        this.actionsBufferHandler.addAction(action);
                     });
                     // add a dummy action to keep timer alive
-                    this.timer.addAction({
+                    this.actionsBufferHandler.addAction({
                         doAction() { },
                         delay: e.delay! - d.positions[0]?.timeOffset,
                     });

@@ -1,22 +1,21 @@
+// TODO: impl interact & live state
 import { createMachine, interpret, assign, StateMachine } from '@xstate/fsm';
 import {
-    playerConfig,
     actionWithDelay,
     ReplayerEvents,
     Emitter,
 } from '../Player/types';
 import { eventWithTime, EventType, IncrementalSource } from '../../../recorder/src/Recorder/types'
-import { addDelay, Timer } from '../Player/Timer';
+import { addDelay, actionsBufferHandler } from '../Player/Timer';
 import { needCastInSyncMode } from '../Player/utils';
 
 export type PlayerContext = {
     events: eventWithTime[];
-    timer: Timer;
+    timer: actionsBufferHandler;
     timeOffset: number;
     baselineTime: number;
     lastPlayedEvent: eventWithTime | null;
 };
-
 
 export type PlayerEvent =
     | { type: 'PLAY';
@@ -43,11 +42,6 @@ export type PlayerState =
         context: PlayerContext;
     }
 
-type PlayerAssets = {
-    emitter: Emitter;
-    getCastFn(event: eventWithTime, isSync: boolean): () => void;
-};
-
 /**
  * If the array have multiple meta and fullsnapshot events,
  * return the events from last meta to the end.
@@ -67,11 +61,23 @@ export function discardPriorSnapshots(
     return events;
 }
 
+/**
+ * @param context the context of the player
+ * * events : events that it will replay
+ * * actionsBufferHandler : a handler for all actions put in the buffer
+ * * timeoffset : playing time offset
+ * * base line time : the current time of the video
+ * * last played event : the last played event
+ * @param getCastFn retrieve the action that perform the player 
+ * @param emitter an emitter instance
+ */
 export function createPlayerService(
     context: PlayerContext,
-    { getCastFn, emitter }: PlayerAssets,
+    getCastFn: (event: eventWithTime, isSync: boolean)=>{ () : void }, 
+    emitter : Emitter,
 ) {
     const playerMachine = createMachine<PlayerContext, PlayerEvent, PlayerState>(
+        //  Basics properties
         {
             id: 'player',
             context,
@@ -107,6 +113,7 @@ export function createPlayerService(
                 },
             },
         },
+        //  All actions that can perform the machine
         {
             actions: {
                 recordTimeOffset: assign((ctx, event) => {
