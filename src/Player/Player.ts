@@ -15,11 +15,11 @@ import {
     metaEvent,
 } from "../../../recorder/src/Recorder/types";
 import * as mittProxy from 'mitt';
-import { mirror } from "../../../recorder/src/Recorder/utils";
+import { _NFHandler } from "../../../recorder/src/Recorder/utils";
 import NodeBuilder from "../NodeBuilder/NodeBuilder";
-import { actionsBufferHandler } from './Timer';
+import { actionScheduler } from './Timer';
 import { createPlayerService } from '../StateMachine/PlayerStateMachine';
-import { Handler, missingNodeMap, playerMetaData, viewportResizeDimention, actionWithDelay, missingNode, ReplayerEvents, Emitter, ElementState } from "./types";
+import { Handler, missingNodeMap, playerMetaData, viewportResizeDimention, actionWithDelay, missingNode, ReplayerEvents, Emitter, ScrollPosition } from "./types";
 import { iterateResolveTree, queueToResolveTrees, TreeIndex, warnNodeNotFound } from "./utils";
 import { NodeFormated, NodeType } from "../../../recorder/src/NodeCaptor/types";
 import PlayerDOM from "./PlayerDOM";
@@ -33,32 +33,65 @@ class Player {
 
     private NodeBuilder!: NodeBuilder;
 
-    private lastPlayedEvent!: eventWithTime;
-    private actionsBufferHandler!: actionsBufferHandler;
+    private actionScheduler!: actionScheduler;
     private loadTimeout: number = 10 * 1000;
 
-    private legacy_missingNodeRetryMap: missingNodeMap = {};
-    private treeIndex!: TreeIndex;
-    private fragmentParentMap!: Map<NodeFormated, NodeFormated>;
-    private elementStateMap!: Map<NodeFormated, ElementState>;
+    private missingNodeMap: missingNodeMap = {}; //  save missing node
+    private treeIndex = new TreeIndex();
+    private fragmentParentMap = new Map<NodeFormated, NodeFormated>(); // optimisize fast-forward
+    private elementScrollPosition  = new Map<NodeFormated, ScrollPosition>();  // store scroll position of element while fast-forward
 
-    private emitter: Emitter = mitt();
-    private service!: ReturnType<typeof createPlayerService>;
+    private emitter: Emitter = mitt();      
+    private playerSM!: ReturnType<typeof createPlayerService>;
 
-    constructor(events: eventWithTime[], w:HTMLDivElement) {
+    constructor(events: eventWithTime[], w: HTMLDivElement) {
+        // retrieve the recorded events to replay
         this.events = events;
-        this.getCastFn = this.getCastFn.bind(this);
-        this.dom.handleResize = this.dom.handleResize.bind(this);
-        this.emitter.on(ReplayerEvents.Resize, this.dom.handleResize as Handler);
+        this.turnEventToAction = this.turnEventToAction.bind(this); // use to turn recorded event to executable action
 
-        this.treeIndex = new TreeIndex();
-        this.fragmentParentMap = new Map<NodeFormated, NodeFormated>();
-        this.elementStateMap = new Map<NodeFormated, ElementState>();
+        // set all handler event sent to the emitter
+        this.setEmitterHandlers();
+
+        //  initialize the some attribute class
+        this.initUtils(w);
+
+        // rebuild first full snapshot as the poster of the player
+        // maybe we can cache it for performance optimization
+        this.setPlayerPoster()
+    }
+
+    private setPlayerPoster() {
+        const firstMeta = this.playerSM.state.context.events.find(
+            (e) => e.type === EventType.Meta,
+        );
+        if (firstMeta) {
+            const { width, height } = firstMeta.data as metaEvent['data'];
+            setTimeout(() => {
+                this.emitter.emit(ReplayerEvents.Resize, {
+                    width,
+                    height,
+                });
+            }, 0);
+        }
+        const firstFullCapture = this.playerSM.state.context.events.find(
+            (e) => e.type === EventType.FullCapture,
+        );
+        if (firstFullCapture) {
+            setTimeout(() => {
+                this.rebuildFullCapture(
+                    firstFullCapture as fullCaptureEvent & { timestamp: number },
+                );
+            }, 1);
+        }
+    }
+
+    private setEmitterHandlers() {
         this.emitter.on(ReplayerEvents.Flush, () => {
             const { scrollMap, inputMap } = this.treeIndex.flush();
 
             for (const [frag, parent] of this.fragmentParentMap.entries()) {
-                mirror.map[parent._fnode.nodeId] = parent;
+                _NFHandler.map[parent._fnode.nodeId] = parent;
+
                 /**
                  * If we have already set value attribute on textarea,
                  * then we could not apply text content as default value any more.
@@ -71,46 +104,19 @@ class Player {
                     ((parent as unknown) as HTMLTextAreaElement).value = frag.textContent;
                 }
                 parent.appendChild(frag);
-                // restore state of elements after they are mounted
-                this.restoreState(parent);
+                // restore scroll position of elements after they are mounted
+                this.restoreScrollPosition(parent);
             }
 
             this.fragmentParentMap.clear();
-            this.elementStateMap.clear();
+            this.elementScrollPosition.clear();
 
-            for (const d of scrollMap.values()) {
-                this.performScroll(d);
-            }
-            for (const d of inputMap.values()) {
-                this.performInput(d);
-            }
+            for (const d of scrollMap.values()) { this.performScroll(d); }
+
+            for (const d of inputMap.values()) { this.performInput(d); }
         });
-
-        this.initUtils(w);
-        // rebuild first full snapshot as the poster of the player
-        // maybe we can cache it for performance optimization
-        const firstMeta = this.service.state.context.events.find(
-            (e) => e.type === EventType.Meta,
-        );
-        if (firstMeta) {
-            const { width, height } = firstMeta.data as metaEvent['data'];
-            setTimeout(() => {
-                this.emitter.emit(ReplayerEvents.Resize, {
-                    width,
-                    height,
-                });
-            }, 0);
-        }
-        const firstFullCapture = this.service.state.context.events.find(
-            (e) => e.type === EventType.FullCapture,
-        );
-        if (firstFullCapture) {
-            setTimeout(() => {
-                this.rebuildFullCapture(
-                    firstFullCapture as fullCaptureEvent & { timestamp: number },
-                );
-            }, 1);
-        }
+        this.dom.handleResize = this.dom.handleResize.bind(this);
+        this.emitter.on(ReplayerEvents.Resize, this.dom.handleResize as Handler);
     }
 
     public on(event: string, handler: Handler) {
@@ -119,45 +125,44 @@ class Player {
     }
 
     private initUtils(w: HTMLDivElement) {
+        //  Setup the player dom (wrapper, iframe, fake cursor mouse)
         this.dom = new PlayerDOM(w)
         this.dom.setupDom()
+
+        //  Create a Node builder
         this.NodeBuilder = new NodeBuilder(this.dom.iframe);
-        this.actionsBufferHandler = new actionsBufferHandler();
-        this.service = createPlayerService(
+        
+        //  Create a actions buffer handler
+        this.actionScheduler = new actionScheduler();
+
+        //  Init player state machine
+        this.playerSM = createPlayerService(
             {
                 events: this.events,
-                timer: this.actionsBufferHandler,
+                actionsBF: this.actionScheduler,
                 timeOffset: 0,
                 baselineTime: 0,
                 lastPlayedEvent: null,
             },
-            this.getCastFn,
+            this.turnEventToAction,
             this.emitter
         );
-        this.service.start();
-        this.service.subscribe((state) => {
+        this.playerSM.start();
+        this.playerSM.subscribe((state) => {
             this.emitter.emit(ReplayerEvents.StateChange, {
                 player: state,
             });
         });
     }
 
-    /**
-     * This API was designed to be used as play at any time offset.
-     * Since we minimized the data collected from recorder, we do not
-     * have the ability of undo an event.
-     * So the implementation of play at any time offset will always iterate
-     * all of the events, cast event before the offset synchronously
-     * and cast event after the offset asynchronously with timer.
-     * @param timeOffset number
-     */
     public play(timeOffset = 0) {
-        if (this.service.state.matches('paused')) {
-            this.service.send({ type: 'PLAY', payload: { timeOffset } });
-        } else {
-            this.service.send({ type: 'PAUSE' });
-            this.service.send({ type: 'PLAY', payload: { timeOffset } });
+        //  Switch to pause state first on playerStateMachine if it's not the case
+        if (!this.playerSM.state.matches('paused')) {
+            this.playerSM.send({ type: 'PAUSE' });
         }
+        //  Switch to play state on playerStateMachine
+        this.playerSM.send({ type: 'PLAY', payload: { timeOffset } });
+        //  Delete the pause class in iframe
         this.dom.iframe.contentDocument
             ?.getElementsByTagName('html')[0]
             .classList.remove('player-paused');
@@ -165,32 +170,26 @@ class Player {
     }
 
     public pause(timeOffset?: number) {
-        if (timeOffset === undefined && this.service.state.matches('playing')) {
-            this.service.send({ type: 'PAUSE' });
+        //  Switch to pause state first on playerStateMachine if it's on play state
+        if (timeOffset === undefined && this.playerSM.state.matches('playing')) {
+            this.playerSM.send({ type: 'PAUSE' });
         }
+        //  TODO: Why this
         if (typeof timeOffset === 'number') {
             this.play(timeOffset);
-            this.service.send({ type: 'PAUSE' });
+            this.playerSM.send({ type: 'PAUSE' });
         }
+        //  Delete the pause class in iframe
         this.dom.iframe.contentDocument
             ?.getElementsByTagName('html')[0]
             .classList.add('player-paused');
         this.emitter.emit(ReplayerEvents.Pause);
     }
 
-    //  TODO: Departed
-    public resume(timeOffset = 0) {
-        console.warn(
-            `The 'resume' will be departed in 1.0. Please use 'play' method which has the same interface.`,
-        );
-        this.play(timeOffset);
-        this.emitter.emit(ReplayerEvents.Resume);
-    }
-
     public getMetaData(): playerMetaData {
-        const firstEvent = this.service.state.context.events[0];
-        const lastEvent = this.service.state.context.events[
-            this.service.state.context.events.length - 1
+        const firstEvent = this.playerSM.state.context.events[0];
+        const lastEvent = this.playerSM.state.context.events[
+            this.playerSM.state.context.events.length - 1
         ];
         return {
             startTime: firstEvent.timestamp,
@@ -200,15 +199,16 @@ class Player {
     }
 
     public getCurrentTime(): number {
-        return this.actionsBufferHandler.timeOffset + this.getTimeOffset();
+        return this.actionScheduler.timeOffset + this.getTimeOffset();
     }
 
     public getTimeOffset(): number {
-        const { baselineTime, events } = this.service.state.context;
+        const { baselineTime, events } = this.playerSM.state.context;
         return baselineTime - events[0].timestamp;
     }
 
-    private getCastFn(event: eventWithTime, isSync = false) {
+    //  ! : Explain
+    private turnEventToAction(event: eventWithTime, isSync = false) {
         let castFn: undefined | (() => void);
 
         switch (event.type) {
@@ -227,39 +227,39 @@ class Player {
                 break;
             case EventType.IncrementalCapture:
                 castFn = () => {
-                    this.applyIncremental(event, isSync);
+                    this.performIncrementalAction(event, isSync);
                 };
                 break;
             default:
         }
 
-        const wrappedCastFn = () => {
+        const wrapped = () => {
             if (castFn) {
                 castFn();
             }
-            this.service.send({ type: 'CAST_EVENT', payload: { event } });
-            this.lastPlayedEvent = event;
+            this.playerSM.send({ type: 'CAST_EVENT', payload: { event } });
             if (event === this.events[this.events.length - 1]) {
-                this.service.send('END');
+                this.playerSM.send('END');
                 this.emitter.emit(ReplayerEvents.Finish);
             }
         };
 
-        return wrappedCastFn;
+        return wrapped;
     }
 
+    //  ! : Explain
     private rebuildFullCapture(event: fullCaptureEvent, isSync: boolean = false) {
         if (!this.dom.iframe.contentDocument) {
             return console.warn("Looks like your replayer has been destroyed.");
         }
-        if (Object.keys(this.legacy_missingNodeRetryMap).length) {
+        if (Object.keys(this.missingNodeMap).length) {
             console.warn(
                 'Found unresolved missing node map',
-                this.legacy_missingNodeRetryMap,
+                this.missingNodeMap,
             );
         }
-        this.legacy_missingNodeRetryMap = {};
-        mirror.map = this.NodeBuilder.build(event.data.node, this.dom.iframe.contentDocument)[1];
+        this.missingNodeMap = {};
+        _NFHandler.map = this.NodeBuilder.build(event.data.node, this.dom.iframe.contentDocument)[1];
         // avoid form submit to refresh the iframe
         this.dom.iframe.contentDocument!.addEventListener('submit', evt => {
             if (evt.target && (evt.target as Element).tagName === 'FORM') {
@@ -273,7 +273,7 @@ class Player {
             }
         })
 
-        if (!this.service.state.matches('playing')) {
+        if (!this.playerSM.state.matches('playing')) {
             this.dom.iframe.contentDocument
                 .getElementsByTagName('html')[0]
                 .classList.add('player-paused');
@@ -293,9 +293,9 @@ class Player {
         if (head) {
             const unloadSheets: Set<HTMLLinkElement> = new Set();
             let timer: number;
-            let beforeLoadState = this.service.state;
+            let beforeLoadState = this.playerSM.state;
             const stateHandler = () => {
-                beforeLoadState = this.service.state;
+                beforeLoadState = this.playerSM.state;
             };
             this.emitter.on(ReplayerEvents.Start, stateHandler);
             this.emitter.on(ReplayerEvents.Pause, stateHandler);
@@ -325,7 +325,7 @@ class Player {
 
             if (unloadSheets.size > 0) {
                 // find some unload sheets after iterate
-                this.service.send({ type: 'PAUSE' });
+                this.playerSM.send({ type: 'PAUSE' });
                 this.emitter.emit(ReplayerEvents.LoadStylesheetStart);
                 timer = window.setTimeout(() => {
                     if (beforeLoadState.matches('playing')) {
@@ -339,7 +339,8 @@ class Player {
         }
     }
 
-    private applyIncremental(
+    //  ! : Explain
+    private performIncrementalAction(
         e: incrementalCaptureEvent & { timestamp: number; delay?: number },
         isSync: boolean
     ) {
@@ -358,22 +359,22 @@ class Player {
             case IncrementalSource.MouseMove: {
                 if (isSync) {
                     const lastPosition = d.positions[d.positions.length - 1];
-                    this.moveAndHover(d, lastPosition.x, lastPosition.y, lastPosition.id);
+                    this.performMouseMove(d, lastPosition.x, lastPosition.y, lastPosition.id);
                 } else {
                     d.positions.forEach((p) => {
                         const action = {
                             doAction: () => {
-                                this.moveAndHover(d, p.x, p.y, p.id);
+                                this.performMouseMove(d, p.x, p.y, p.id);
                             },
                             delay:
                                 p.timeOffset +
                                 e.timestamp -
-                                this.service.state.context.baselineTime,
+                                this.playerSM.state.context.baselineTime,
                         };
-                        this.actionsBufferHandler.addAction(action);
+                        this.actionScheduler.addAction(action);
                     });
                     // add a dummy action to keep timer alive
-                    this.actionsBufferHandler.addAction({
+                    this.actionScheduler.addAction({
                         doAction() { },
                         delay: e.delay! - d.positions[0]?.timeOffset,
                     });
@@ -388,7 +389,7 @@ class Player {
                     break;
                 }
                 const event = new Event(MouseInteractions[d.type].toLowerCase());
-                const target = mirror.getNode(d.id);
+                const target = _NFHandler.getNode(d.id);
                 if (!target) {
                     return warnNodeNotFound(d, d.id);
                 }
@@ -418,7 +419,7 @@ class Player {
                          * clicked at this moment.
                          */
                         if (!isSync) {
-                            this.moveAndHover(d, d.x, d.y, d.id);
+                            this.performMouseMove(d, d.x, d.y, d.id);
                             this.dom.mouse.classList.remove('active');
                             // tslint:disable-next-line
                             void this.dom.mouse.offsetWidth;
@@ -469,7 +470,7 @@ class Player {
                 break;
             }
             case IncrementalSource.MediaInteraction: {
-                const target = mirror.getNode(d.id);
+                const target = _NFHandler.getNode(d.id);
                 if (!target) {
                     return warnNodeNotFound(d, d.id);
                 }
@@ -495,7 +496,7 @@ class Player {
                 break;
             }
             case IncrementalSource.StyleSheetRule: {
-                const target = mirror.getNode(d.id);
+                const target = _NFHandler.getNode(d.id);
                 if (!target) {
                     return warnNodeNotFound(d, d.id);
                 }
@@ -560,18 +561,19 @@ class Player {
         }
     }
 
+    //  ! : Explain
     private performMutation(d: mutationData, useVirtualParent: boolean) {
         d.removes.forEach((mutation) => {
-            const target = mirror.getNode(mutation.id);
+            const target = _NFHandler.getNode(mutation.id);
             if (!target) {
                 return warnNodeNotFound(d, mutation.id);
             }
-            const parent = mirror.getNode(mutation.parentId);
+            const parent = _NFHandler.getNode(mutation.parentId);
             if (!parent) {
                 return warnNodeNotFound(d, mutation.parentId);
             }
             // target may be removed with its parents before
-            mirror.removeNodeFromMap(target);
+            _NFHandler.removeNodeFromMap(target);
             if (parent) {
                 const realParent = this.fragmentParentMap.get(parent);
                 if (realParent && realParent.contains(target)) {
@@ -592,7 +594,7 @@ class Player {
 
         // tslint:disable-next-line: variable-name
         const legacy_missingNodeMap: missingNodeMap = {
-            ...this.legacy_missingNodeRetryMap,
+            ...this.missingNodeMap,
         };
         const queue: addedNodeMutation[] = [];
 
@@ -600,7 +602,7 @@ class Player {
         function nextNotInDOM(mutation: addedNodeMutation) {
             let next: Node | null = null;
             if (mutation.nextId) {
-                next = mirror.getNode(mutation.nextId) as Node;
+                next = _NFHandler.getNode(mutation.nextId) as Node;
             }
             // next not present at this moment
             if (
@@ -618,7 +620,7 @@ class Player {
             if (!this.dom.iframe.contentDocument) {
                 return console.warn('Looks like your replayer has been destroyed.');
             }
-            let parent = mirror.getNode(mutation.parentId);
+            let parent = _NFHandler.getNode(mutation.parentId);
             if (!parent) {
                 return queue.push(mutation);
             }
@@ -634,11 +636,11 @@ class Player {
 
             if (useVirtualParent && parentInDocument) {
                 const virtualParent = (document.createDocumentFragment() as unknown) as NodeFormated;
-                mirror.map[mutation.parentId] = virtualParent;
+                _NFHandler.map[mutation.parentId] = virtualParent;
                 this.fragmentParentMap.set(virtualParent, parent);
 
                 // store the state, like scroll position, of child nodes before they are unmounted from dom
-                this.storeState(parent);
+                this.storeScrollPosition(parent);
 
                 while (parent.firstChild) {
                     virtualParent.appendChild(parent.firstChild);
@@ -649,10 +651,10 @@ class Player {
             let previous: Node | null = null;
             let next: Node | null = null;
             if (mutation.previousId) {
-                previous = mirror.getNode(mutation.previousId) as Node;
+                previous = _NFHandler.getNode(mutation.previousId) as Node;
             }
             if (mutation.nextId) {
-                next = mirror.getNode(mutation.nextId) as Node;
+                next = _NFHandler.getNode(mutation.nextId) as Node;
             }
             if (nextNotInDOM(mutation)) {
                 return queue.push(mutation);
@@ -682,7 +684,7 @@ class Player {
             }
 
             if (mutation.previousId || mutation.nextId) {
-                this.legacy_resolveMissingNode(
+                this.resolveMissingNode(
                     legacy_missingNodeMap,
                     parent,
                     target,
@@ -699,7 +701,7 @@ class Player {
             const resolveTrees = queueToResolveTrees(queue);
             queue.length = 0;
             for (const tree of resolveTrees) {
-                let parent = mirror.getNode(tree.value.parentId);
+                let parent = _NFHandler.getNode(tree.value.parentId);
                 if (parent) {
                     iterateResolveTree(tree, (mutation) => {
                         appendNode(mutation);
@@ -709,11 +711,11 @@ class Player {
         }
 
         if (Object.keys(legacy_missingNodeMap).length) {
-            Object.assign(this.legacy_missingNodeRetryMap, legacy_missingNodeMap);
+            Object.assign(this.missingNodeMap, legacy_missingNodeMap);
         }
 
         d.texts.forEach((mutation) => {
-            let target = mirror.getNode(mutation.id);
+            let target = _NFHandler.getNode(mutation.id);
             if (!target) {
                 return warnNodeNotFound(d, mutation.id);
             }
@@ -726,7 +728,7 @@ class Player {
             target.textContent = mutation.value;
         });
         d.attributes.forEach((mutation) => {
-            let target = mirror.getNode(mutation.id);
+            let target = _NFHandler.getNode(mutation.id);
             if (!target) {
                 return warnNodeNotFound(d, mutation.id);
             }
@@ -750,8 +752,9 @@ class Player {
         });
     }
 
+    //  ! : Explain
     private performScroll(d: scrollData) {
-        const target = mirror.getNode(d.id);
+        const target = _NFHandler.getNode(d.id);
         if (!target) {
             return warnNodeNotFound(d, d.id);
         }
@@ -774,8 +777,9 @@ class Player {
         }
     }
 
+    //  ! : Explain
     private performInput(d: inputData) {
-        const target = mirror.getNode(d.id);
+        const target = _NFHandler.getNode(d.id);
         if (!target) {
             return warnNodeNotFound(d, d.id);
         }
@@ -787,54 +791,55 @@ class Player {
         }
     }
 
+    private performMouseMove(d: incrementalData, x: number, y: number, id: number) {
+        this.dom.mouse.style.left = `${x}px`;
+        this.dom.mouse.style.top = `${y}px`;
 
-    /**
-     * store state of elements before unmounted from dom recursively
-     * the state should be restored in the handler of event ReplayerEvents.Flush
-     * e.g. browser would lose scroll position after the process that we add children of parent node to Fragment Document as virtual dom
-     */
-    private storeState(parent: NodeFormated) {
+        const target = _NFHandler.getNode(id);
+        if (!target) {
+            return warnNodeNotFound(d, id);
+        }
+        this.hoverElements((target as Node) as Element);
+    }
+
+    private storeScrollPosition(parent: NodeFormated) {
         if (parent) {
             if (parent.nodeType === parent.ELEMENT_NODE) {
                 const parentElement = (parent as unknown) as HTMLElement;
                 if (parentElement.scrollLeft || parentElement.scrollTop) {
                     // store scroll position state
-                    this.elementStateMap.set(parent, {
+                    this.elementScrollPosition.set(parent, {
                         scroll: [parentElement.scrollLeft, parentElement.scrollTop],
                     });
                 }
                 const children = parentElement.children;
                 for (const child of Array.from(children)) {
-                    this.storeState((child as unknown) as NodeFormated);
+                    this.storeScrollPosition((child as unknown) as NodeFormated);
                 }
             }
         }
     }
 
-    /**
-     * restore the state of elements recursively, which was stored before elements were unmounted from dom in virtual parent mode
-     * this function corresponds to function storeState
-     */
-    private restoreState(parent: NodeFormated) {
+    private restoreScrollPosition(parent: NodeFormated) {
         if (parent.nodeType === parent.ELEMENT_NODE) {
             const parentElement = (parent as unknown) as HTMLElement;
-            if (this.elementStateMap.has(parent)) {
-                const storedState = this.elementStateMap.get(parent)!;
+            if (this.elementScrollPosition.has(parent)) {
+                const storedState = this.elementScrollPosition.get(parent)!;
                 // restore scroll position
                 if (storedState.scroll) {
                     parentElement.scrollLeft = storedState.scroll[0];
                     parentElement.scrollTop = storedState.scroll[1];
                 }
-                this.elementStateMap.delete(parent);
+                this.elementScrollPosition.delete(parent);
             }
             const children = parentElement.children;
             for (const child of Array.from(children)) {
-                this.restoreState((child as unknown) as NodeFormated);
+                this.restoreScrollPosition((child as unknown) as NodeFormated);
             }
         }
     }
 
-    private legacy_resolveMissingNode(
+    private resolveMissingNode(
         map: missingNodeMap,
         parent: Node,
         target: Node,
@@ -847,31 +852,20 @@ class Player {
             const { node, mutation } = previousInMap as missingNode;
             parent.insertBefore(node, target);
             delete map[mutation.node.nodeId];
-            delete this.legacy_missingNodeRetryMap[mutation.node.nodeId];
+            delete this.missingNodeMap[mutation.node.nodeId];
             if (mutation.previousId || mutation.nextId) {
-                this.legacy_resolveMissingNode(map, parent, node as Node, mutation);
+                this.resolveMissingNode(map, parent, node as Node, mutation);
             }
         }
         if (nextInMap) {
             const { node, mutation } = nextInMap as missingNode;
             parent.insertBefore(node, target.nextSibling);
             delete map[mutation.node.nodeId];
-            delete this.legacy_missingNodeRetryMap[mutation.node.nodeId];
+            delete this.missingNodeMap[mutation.node.nodeId];
             if (mutation.previousId || mutation.nextId) {
-                this.legacy_resolveMissingNode(map, parent, node as Node, mutation);
+                this.resolveMissingNode(map, parent, node as Node, mutation);
             }
         }
-    }
-
-    private moveAndHover(d: incrementalData, x: number, y: number, id: number) {
-        this.dom.mouse.style.left = `${x}px`;
-        this.dom.mouse.style.top = `${y}px`;
-
-        const target = mirror.getNode(id);
-        if (!target) {
-            return warnNodeNotFound(d, id);
-        }
-        this.hoverElements((target as Node) as Element);
     }
 
     private hoverElements(el: Element) {
