@@ -12,7 +12,7 @@ import {
     scrollData,
     textMutation,
 } from "../../../recorder/src/Recorder/types";
-import { mirror } from "../../../recorder/src/Recorder/utils";
+import { _NFHandler } from "../../../recorder/src/Recorder/utils";
 
 const REPLAY_CONSOLE_PREFIX = '[replayer]';
 
@@ -65,14 +65,15 @@ export type TreeNode = {
     attributes: attributeMutation[];
 };
 
+//  ! : Explain
 export class TreeIndex {
-    public tree!: Record<number, TreeNode>;
+    public tree!: Record<number, TreeNode>;     //  Construct a type with a set of properties K of type T
 
     private removeNodeMutations!: removedNodeMutation[];
     private textMutations!: textMutation[];
     private attributeMutations!: attributeMutation[];
-    private indexes!: Map<number, TreeNode>;
-    private removeIdSet!: Set<number>;
+    private indexes!: Map<number, TreeNode>;            //  Map for all added node
+    private removeIdSet!: Set<number>;                  //  Id of all removed node
     private scrollMap!: Map<number, scrollData>;
     private inputMap!: Map<number, inputData>;
 
@@ -81,6 +82,7 @@ export class TreeIndex {
     }
 
     public add(mutation: addedNodeMutation) {
+        //  Add a node in the tree
         const parentTreeNode = this.indexes.get(mutation.parentId);
         const treeNode: TreeNode = {
             id: mutation.node.nodeId,
@@ -104,13 +106,14 @@ export class TreeIndex {
 
         const deepRemoveFromMirror = (id: number) => {
             this.removeIdSet.add(id);
-            const node = mirror.getNode(id);
+            const node = _NFHandler.getNode(id);
             node?.childNodes.forEach((childNode) => {
                 if ('__sn' in childNode) {
                     deepRemoveFromMirror(((childNode as unknown) as NodeFormated)._fnode.nodeId);
                 }
             });
         };
+
         const deepRemoveFromTreeIndex = (node: TreeNode) => {
             this.removeIdSet.add(node.id);
             Object.values(node.children).forEach((n) => deepRemoveFromTreeIndex(n));
@@ -166,6 +169,7 @@ export class TreeIndex {
         this.inputMap.set(d.id, d);
     }
 
+    //  Browse and collect information from not removed node and reset the intance
     public flush(): {
         mutationData: mutationData;
         scrollMap: TreeIndex['scrollMap'];
@@ -178,7 +182,7 @@ export class TreeIndex {
             attributeMutations,
         } = this;
 
-        const batchMutationData: mutationData = {
+        const groupedMutationData: mutationData = {
             source: IncrementalSource.Mutation,
             removes: removeNodeMutations,
             texts: textMutations,
@@ -186,37 +190,47 @@ export class TreeIndex {
             adds: [],
         };
 
-        const walk = (treeNode: TreeNode, removed: boolean) => {
+        //  Browse node and collect not removed node
+        const browseNode = (treeNode: TreeNode, removed: boolean) => {
             if (removed) {
+                //  if we need to remove we add this node id to the remove id set
                 this.removeIdSet.add(treeNode.id);
             }
-            batchMutationData.texts = batchMutationData.texts
-                .concat(removed ? [] : treeNode.texts)
-                .filter((m) => !this.removeIdSet.has(m.id));
-            batchMutationData.attributes = batchMutationData.attributes
-                .concat(removed ? [] : treeNode.attributes)
-                .filter((m) => !this.removeIdSet.has(m.id));
+            //  we collect texts and attributes from needed mutations
+            groupedMutationData.texts = groupedMutationData.texts
+                .concat(removed ? [] : treeNode.texts)          //  add text for the node
+                .filter((m) => !this.removeIdSet.has(m.id));    //  collect the not removed texts
+            groupedMutationData.attributes = groupedMutationData.attributes
+                .concat(removed ? [] : treeNode.attributes)     //  add attributes for the node
+                .filter((m) => !this.removeIdSet.has(m.id));    //  collect the not removed attributes
             if (
                 !this.removeIdSet.has(treeNode.id) &&
                 !this.removeIdSet.has(treeNode.mutation.parentId) &&
                 !removed
             ) {
-                batchMutationData.adds.push(treeNode.mutation);
+                //  If this is a needed mutation we push it to the groupedMutationData
+                groupedMutationData.adds.push(treeNode.mutation);
                 if (treeNode.children) {
-                    Object.values(treeNode.children).forEach((n) => walk(n, false));
+                    Object.values(treeNode.children).forEach((n) => browseNode(n, false));
                 }
             } else {
-                Object.values(treeNode.children).forEach((n) => walk(n, true));
+                // otherwise remove all these children
+                Object.values(treeNode.children).forEach((n) => browseNode(n, true));
             }
         };
 
-        Object.values(tree).forEach((n) => walk(n, false));
+        Object.values(tree).forEach(
+            (n) => browseNode(n, false)
+        );
 
+        //  Delete scroll position of removed node from the scroll Map
         for (const id of this.scrollMap.keys()) {
             if (this.removeIdSet.has(id)) {
                 this.scrollMap.delete(id);
             }
         }
+
+        //  Delete input value of removed node from the input Map
         for (const id of this.inputMap.keys()) {
             if (this.removeIdSet.has(id)) {
                 this.inputMap.delete(id);
@@ -229,7 +243,7 @@ export class TreeIndex {
         this.reset();
 
         return {
-            mutationData: batchMutationData,
+            mutationData: groupedMutationData,
             scrollMap,
             inputMap,
         };
@@ -247,6 +261,7 @@ export class TreeIndex {
     }
 }
 
+//  ResolveTree
 type ResolveTree = {
     value: addedNodeMutation;
     children: ResolveTree[];

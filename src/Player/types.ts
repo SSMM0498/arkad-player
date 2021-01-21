@@ -54,7 +54,7 @@ export enum ReplayerEvents {
     StateChange = 'state-change',
 }
 
-export type ElementState = {
+export type ScrollPosition = {
     // [scrollLeft,scrollTop]
     scroll?: [number, number];
 };

@@ -139,7 +139,7 @@ class Player {
         this.playerSM = createPlayerService(
             {
                 events: this.events,
-                actionsBF: this.actionScheduler,
+                actionScheduler: this.actionScheduler,
                 timeOffset: 0,
                 baselineTime: 0,
                 lastPlayedEvent: null,

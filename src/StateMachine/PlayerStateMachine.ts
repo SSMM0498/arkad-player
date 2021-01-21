@@ -6,19 +6,20 @@ import {
     Emitter,
 } from '../Player/types';
 import { eventWithTime, EventType, IncrementalSource } from '../../../recorder/src/Recorder/types'
-import { addDelay, actionsBufferHandler } from '../Player/Timer';
+import { addDelay, actionScheduler } from '../Player/Timer';
 import { needCastInSyncMode } from '../Player/utils';
 
 export type PlayerContext = {
     events: eventWithTime[];
-    timer: actionsBufferHandler;
+    actionScheduler: actionScheduler;
     timeOffset: number;
     baselineTime: number;
     lastPlayedEvent: eventWithTime | null;
 };
 
 export type PlayerEvent =
-    | { type: 'PLAY';
+    | {
+        type: 'PLAY';
         payload: {
             timeOffset: number;
         };
@@ -46,15 +47,15 @@ export type PlayerState =
  * If the array have multiple meta and fullsnapshot events,
  * return the events from last meta to the end.
  */
-export function discardPriorSnapshots(
+export function retrieveNeedEvents(
     events: eventWithTime[],
     baselineTime: number,
 ): eventWithTime[] {
-    for (let idx = events.length - 1; idx >= 0; idx--) {
-        const event = events[idx];
+    for (let i = events.length - 1; i >= 0; i--) {
+        const event = events[i];
         if (event.type === EventType.Meta) {
             if (event.timestamp <= baselineTime) {
-                return events.slice(idx);
+                return events.slice(i);
             }
         }
     }
@@ -73,8 +74,8 @@ export function discardPriorSnapshots(
  */
 export function createPlayerService(
     context: PlayerContext,
-    getCastFn: (event: eventWithTime, isSync: boolean)=>{ () : void }, 
-    emitter : Emitter,
+    getCastFn: (event: eventWithTime, isSync: boolean) => { (): void },
+    emitter: Emitter,
 ) {
     const playerMachine = createMachine<PlayerContext, PlayerEvent, PlayerState>(
         //  Basics properties
@@ -137,17 +138,23 @@ export function createPlayerService(
                 }),
                 play(ctx) {
                     console.warn('play');
-                    const { timer, events, baselineTime, lastPlayedEvent } = ctx;
-                    timer.clear();
+                    const { actionScheduler: actionsBF, events, baselineTime, lastPlayedEvent } = ctx;
+                    actionsBF.clear();      // Delete all buffered actions
                     for (const event of events) {
                         // TODO: improve this API
                         addDelay(event, baselineTime);
                     }
-                    const neededEvents = discardPriorSnapshots(events, baselineTime);
+                    const neededEvents = retrieveNeedEvents(events, baselineTime);
 
                     const actions = new Array<actionWithDelay>();
+
+                    /**
+                     * Foreach event produce an corresponding action
+                     * 
+                     */
                     for (const event of neededEvents) {
                         let lastPlayedTimestamp = lastPlayedEvent?.timestamp;
+                        //  Check if the last played event is a mouse incremental event 
                         if (
                             lastPlayedEvent?.type === EventType.IncrementalCapture &&
                             lastPlayedEvent.data.source === IncrementalSource.MouseMove
@@ -156,18 +163,20 @@ export function createPlayerService(
                                 lastPlayedEvent.timestamp +
                                 lastPlayedEvent.data.positions[0]?.timeOffset;
                         }
+                        //  Check if the time is passed for this event
                         if (
                             lastPlayedTimestamp &&
                             lastPlayedTimestamp < baselineTime &&
-                            (event.timestamp <= lastPlayedTimestamp ||
-                                event === lastPlayedEvent)
+                            (event.timestamp <= lastPlayedTimestamp || event === lastPlayedEvent)
                         ) {
                             continue;
                         }
+                        //  Check if the time is'nt up for this event and this event is not a mouse or media interaction event
                         const isSync = event.timestamp < baselineTime;
                         if (isSync && !needCastInSyncMode(event)) {
                             continue;
                         }
+                        //  
                         const castFn = getCastFn(event, isSync);
                         if (isSync) {
                             castFn();
@@ -181,12 +190,13 @@ export function createPlayerService(
                             });
                         }
                     }
+                    //  
                     emitter.emit(ReplayerEvents.Flush);
-                    timer.addActions(actions);
-                    timer.start();
+                    actionsBF.addActions(actions);
+                    actionsBF.start();
                 },
                 pause(ctx) {
-                    ctx.timer.clear();
+                    ctx.actionScheduler.clear();
                 },
                 resetLastPlayedEvent: assign((ctx) => {
                     return {
