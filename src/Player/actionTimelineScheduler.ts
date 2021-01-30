@@ -5,7 +5,7 @@ import {
 } from '../../../recorder/src/Recorder/types';
 import { actionWithDelay } from './types';
 
-export class actionScheduler {
+export class actionTimelineScheduler {
     public timeOffset: number = 0;
 
     private actionsBuffer: actionWithDelay[];
