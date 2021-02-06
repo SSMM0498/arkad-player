@@ -16,5 +16,5 @@
     },
     "compileOnSave": true,
     "exclude": ["test"],
-    "include": ["src", "test.d.ts"]
+    "include": ["src", "test.d.ts", "core/PlayerDOM/utils.ts", "core/Player/types.ts", "core/Player/Player.ts", "core/Player/utils.ts", "core/PlayerStateMachine/PlayerStateMachine.ts", "core/index.ts", "src/view/components"]
 }
