@@ -1,3 +1,5 @@
 node_modules/
 core/
 view/
+build/
+player.code-workspace

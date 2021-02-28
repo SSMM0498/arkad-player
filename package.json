@@ -4,6 +4,7 @@
   "description": "Arkad core replayer for replaying the arkast by simulating all the recorded event",
   "main": "dist/arkad-player.js",
   "scripts": {
+    "bundle": "rollup --config",
     "test": "mocha -r ts-node/register test/**/*.test.ts"
   },
   "repository": {
