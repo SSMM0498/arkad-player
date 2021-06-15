@@ -1,19 +1,26 @@
 {
     "compilerOptions": {
-        "module": "commonjs",
+        "module": "CommonJS",
         "target": "ES5",
-        "strict": false,
         "noImplicitAny": true,
-        "strictNullChecks": false,
+        "strictNullChecks": true,
         "removeComments": true,
         "preserveConstEnums": true,
         "sourceMap": false,
-        "rootDir": "../",
         "outDir": "build",
-        "lib": ["es6", "dom"],
+        "rootDir": "src",
+        "lib": [
+            "es6",
+            "dom"
+        ],
         "downlevelIteration": true
     },
     "compileOnSave": true,
-    "exclude": ["test"],
-    "include": ["src","../recorder/src"]
+    "exclude": [
+        "test"
+    ],
+    "include": [
+        "./src",
+        "./src/_core"
+    ]
 }

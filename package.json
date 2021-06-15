@@ -3,8 +3,10 @@
   "version": "1.0.0",
   "description": "Arkad core replayer for replaying the arkast by simulating all the recorded event",
   "main": "dist/arkad-player.js",
+  "type": "module",
   "scripts": {
     "bundle": "rollup --config",
+    "dev": "rollup -w --config",
     "test": "mocha -r ts-node/register test/**/*.test.ts"
   },
   "repository": {
@@ -18,6 +20,9 @@
   },
   "homepage": "https://github.com/SSMM0498/arkad-player#readme",
   "devDependencies": {
+    "@rollup/plugin-commonjs": "^19.0.0",
+    "@rollup/plugin-json": "^4.1.0",
+    "@rollup/plugin-node-resolve": "^13.0.0",
     "@types/chai": "^4.2.14",
     "@types/jsdom-global": "^3.0.2",
     "@types/mocha": "^8.0.4",
@@ -30,7 +35,7 @@
     "mocha": "^8.2.1",
     "nyc": "^15.1.0",
     "puppeteer": "^5.5.0",
-    "rollup": "^2.34.1",
+    "rollup": "^2.38.0",
     "rollup-plugin-terser": "^7.0.2",
     "rollup-plugin-typescript": "^1.0.1",
     "ts-node": "^9.1.0",

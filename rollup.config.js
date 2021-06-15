@@ -1,42 +1,24 @@
+import json from '@rollup/plugin-json';
+import commonjs from "@rollup/plugin-commonjs";
 import typescript from 'rollup-plugin-typescript';
-import {
-    terser
-} from 'rollup-plugin-terser';
+import resolve from '@rollup/plugin-node-resolve'
 import pkg from './package.json';
 
 function toMinPath(path) {
     return path.replace(/\.js$/, '.min.js');
 }
 
-export default [
-    {
-        input: './src/core/index.ts',
-        plugins: [typescript()],
-        output: [{
-            name: 'ArkadPlayer',
-            format: 'es',
-            file: pkg.main,
-        }, ],
-    },
-    // {
-    //     input: '../recorder/src/index.ts',
-    //     plugins: [typescript(), terser()],
-    //     output: [{
-    //         name: 'ArkadRecorder',
-    //         format: 'es',
-    //         file: pkg.main,
-    //         file: toMinPath(pkg.main),
-    //         sourcemap: true,
-    //     }, ],
-    // },
-    // {
-    //     input: './src/core/index.ts',
-    //     plugins: [typescript(), terser()],
-    //     output: [{
-    //         name: 'ArkadPlayer',
-    //         format: 'es',
-    //         file: toMinPath(pkg.main),
-    //         sourcemap: true,
-    //     }, ],
-    // },
-];
+export default [{
+    input: './src/core/index.ts',
+    plugins: [
+        json(),
+        typescript(),
+        resolve(),
+        commonjs()
+    ],
+    output: [{
+        name: 'ArkadPlayer',
+        format: 'es',
+        file: pkg.main,
+    }, ],
+}];

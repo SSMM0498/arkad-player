@@ -1,5 +1,7 @@
 node_modules/
-core/
+_core/
 view/
 build/
+dist/
+test/arkast/
 player.code-workspace
