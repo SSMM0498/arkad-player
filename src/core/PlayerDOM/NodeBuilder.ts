@@ -63,7 +63,7 @@ class NodeBuilder {
      * @param cssText a css text
     **/
     private changeHoverStyle(cssText: string): string {
-        const ast = parse(cssText, { silent: true })
+        const ast = parse(cssText, { silent: true });
 
         if (!ast.stylesheet) {
             return cssText
@@ -201,12 +201,13 @@ class NodeBuilder {
     public buildAllNodes(
         rootNode: NodeCaptured,
         map: DocumentNodesMap,
-        doc: Document
-    ): [NodeEncoded | null, NodeCaptured[]] {
+        doc: Document,
+        afterAppend?: (n: NodeEncoded) => unknown,
+    ): NodeEncoded | null {
         let node = this.buildNode(rootNode, doc);
-        
+
         if (!node) {
-            return [null, [rootNode]]; // TODO: Check this
+            return null; // TODO: Check this
         }
         // TODO: Check this
         if (rootNode.originId) {
@@ -216,22 +217,23 @@ class NodeBuilder {
             );
         }
 
-        
+        if (rootNode.type === NodeType.Document) {
+            // close before open to make sure document was closed
+            doc.close();
+            doc.open();
+            node = doc;
+        }
+
         // Use target document as root document
         (node as NodeEncoded)._cnode = rootNode;
         map[rootNode.nodeId] = node as NodeEncoded;
 
         if (
-            rootNode.type === NodeType.Document || 
+            rootNode.type === NodeType.Document ||
             rootNode.type === NodeType.Element
         ) {
-            const nodeIsIframe = isIframe(rootNode);
-
-            if (nodeIsIframe) {
-                return [node as NodeEncoded, rootNode.childNodes];
-            }
             for (const childN of rootNode.childNodes) {
-                const [childNode, nestedNodes] = this.buildAllNodes(childN, map, doc);
+                const childNode = this.buildAllNodes(childN, map, doc);
 
                 if (!childNode) {
                     console.warn('Failed to rebuild', childN);
@@ -239,20 +241,17 @@ class NodeBuilder {
                 }
 
                 node.appendChild(childNode);
-                if (nestedNodes.length === 0) {
-                    continue;
-                }
 
-                const childNodeIsIframe = isIframe(childN);
-                if (childNodeIsIframe) {
-                    this.buildIframe(
-                        nestedNodes,
-                        map,
-                    )
+                // if (nestedNodes.length === 0) {
+                //     continue;
+                // }
+
+                if (afterAppend) {
+                    afterAppend(childNode);
                 }
             }
         }
-        return [node as NodeEncoded, []];
+        return node as NodeEncoded;
     }
 
     /**
@@ -262,20 +261,48 @@ class NodeBuilder {
      */
     public build(
         n: NodeCaptured,
-        doc: Document
+        doc: Document,
+        afterAppend?: (n: NodeEncoded) => unknown,
     ): [Node | null, DocumentNodesMap] {
         const DocumentNodesMap: DocumentNodesMap = {}
-        const [node] = this.buildAllNodes(n, DocumentNodesMap, doc);
+        const node = this.buildAllNodes(n, DocumentNodesMap, doc, afterAppend);
+        visit(DocumentNodesMap, (visitedNode) => {
+            handleScroll(visitedNode);
+        });
         return [node, DocumentNodesMap]
     }
 }
 
-/**
- * check if this node is an iframe
- * @param n a captured node
- */
-function isIframe(n: NodeCaptured) {
-    return n.type === NodeType.Element && n.elementName === 'iframe';
+function visit(docNodesMap: DocumentNodesMap, onVisit: (node: NodeEncoded) => void) {
+    function walk(node: NodeEncoded) {
+        onVisit(node);
+    }
+
+    for (const key in docNodesMap) {
+        if (docNodesMap[key]) {
+            walk(docNodesMap[key]);
+        }
+    }
+}
+
+function handleScroll(node: NodeEncoded) {
+    const n = node._cnode;
+    if (n.type !== NodeType.Element) {
+        return;
+    }
+    const el = (node as Node) as HTMLElement;
+    for (const name in n.attributes) {
+        if (!(n.attributes.hasOwnProperty(name) && name.startsWith('__'))) {
+            continue;
+        }
+        const value = n.attributes[name];
+        if (name === '__scrollLeft') {
+            el.scrollLeft = value as number;
+        }
+        if (name === '__scrollTop') {
+            el.scrollTop = value as number;
+        }
+    }
 }
 
 export default NodeBuilder;

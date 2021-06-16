@@ -8,7 +8,8 @@ class PlayerDOM {
     public cursor!: HTMLDivElement;
 
     constructor(w: HTMLDivElement) {
-        this.wrapper = w
+        this.wrapper = w;
+        this.handleResize = this.handleResize.bind(this);
     }
 
     public setupDom() {
@@ -22,6 +23,7 @@ class PlayerDOM {
 
         //  Set up player iframe
         this.iframe = document.createElement("iframe");
+        this.iframe.classList.add("replayer-iframe");
         this.iframe.setAttribute('sandbox', 'allow-same-origin allow-scripts');
         this.wrapper.appendChild(this.iframe);
 

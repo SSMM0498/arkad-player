@@ -10,12 +10,55 @@
             margin: 0;
             padding: 0;
         }
+
         body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100vh;
             overflow: hidden;
         }
+
         #player {
             width: 100%;
             height: 100vh;
+        }
+
+        .replayer-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+            background-color: black;
+        }
+
+        .replayer-iframe {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden
+        }
+
+        .replayer-iframe {
+            border: none;
+        }
+
+        .replayer-mouse {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            transition: 0.05s linear;
+            background-size: contain;
+            background-position: center center;
+            background-repeat: no-repeat;
+            background-image: url('data:image/svg+xml;base64,PHN2ZyBoZWlnaHQ9JzMwMHB4JyB3aWR0aD0nMzAwcHgnICBmaWxsPSIjMDAwMDAwIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGRhdGEtbmFtZT0iTGF5ZXIgMSIgdmlld0JveD0iMCAwIDUwIDUwIiB4PSIwcHgiIHk9IjBweCI+PHRpdGxlPkRlc2lnbl90bnA8L3RpdGxlPjxwYXRoIGQ9Ik00OC43MSw0Mi45MUwzNC4wOCwyOC4yOSw0NC4zMywxOEExLDEsMCwwLDAsNDQsMTYuMzlMMi4zNSwxLjA2QTEsMSwwLDAsMCwxLjA2LDIuMzVMMTYuMzksNDRhMSwxLDAsMCwwLDEuNjUuMzZMMjguMjksMzQuMDgsNDIuOTEsNDguNzFhMSwxLDAsMCwwLDEuNDEsMGw0LjM4LTQuMzhBMSwxLDAsMCwwLDQ4LjcxLDQyLjkxWm0tNS4wOSwzLjY3TDI5LDMyYTEsMSwwLDAsMC0xLjQxLDBsLTkuODUsOS44NUwzLjY5LDMuNjlsMzguMTIsMTRMMzIsMjcuNThBMSwxLDAsMCwwLDMyLDI5TDQ2LjU5LDQzLjYyWiI+PC9wYXRoPjwvc3ZnPg==');
+        }
+
+        .replayer-mouse.active::after {
+            animation: click 0.2s ease-in-out 1;
         }
     </style>
 </head>
@@ -27,8 +70,9 @@
         import eventList from './arkast/arkast.js';
         const aplayer = document.getElementById("arkastplayer");
 
-        window.onload = function() {
-            const pl = new Player(eventList,aplayer)
+        window.onload = function () {
+            const pl = new Player(eventList, aplayer);
+            pl.play();
             // console.log(eventList);
             // const ifr = document.getElementById("player");
             // const ifrDoc = ifr.contentWindow.document;
@@ -36,7 +80,7 @@
             // const nb = new NodeBuilder(document);
 
             // const dom = nb.build(build, document);
-            
+
             // let domJson = dom[0].documentElement.outerHTML;
 
             // ifrDoc.open('text/html', 'replace');
