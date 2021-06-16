@@ -3,7 +3,7 @@
 import { createMachine, assign, interpret, StateMachine } from "@xstate/fsm";
 import { ActionTimelineScheduler, addDelay } from "../ActionsHandler/ActionTimeScheduler";
 import { eventWithTime, EventType, actionWithDelay, IncrementalSource, ReplayerEvents, Emitter } from "../PlayerDOM/types";
-import { needCastInSyncMode } from "../utils";
+import { needCastInSyncMode } from "../Player/utils";
 
 export type PlayerContext = {
     events: eventWithTime[];
@@ -190,7 +190,6 @@ export function createPlayerService(
                     },
                 }),
                 play(ctx) {
-                    console.warn('play');
                     const { actionScheduler: actionsBF, events, baselineTime, lastPlayedEvent } = ctx;
                     actionsBF.clear();      // Delete all buffered actions
                     for (const event of events) {

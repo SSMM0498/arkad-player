@@ -2,7 +2,7 @@ import { _NFMHandler } from "../../PlayerDOM/NFMHandler";
 import NodeBuilder from "../../PlayerDOM/NodeBuilder";
 import PlayerDOM from "../../PlayerDOM/PlayerDOM";
 import { mutationData, missingNodeMap, addedNodeMutation, NodeEncoded } from "../../PlayerDOM/types";
-import { iterateResolveTree, queueToResolveTrees, warnNodeNotFound } from "../../utils";
+import { iterateResolveTree, queueToResolveTrees, warnNodeNotFound } from "../../Player/utils";
 
 export function perform(
     d: mutationData,

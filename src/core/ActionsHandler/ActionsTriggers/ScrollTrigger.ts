@@ -1,7 +1,7 @@
 import { _NFMHandler } from "../../PlayerDOM/NFMHandler";
 import PlayerDOM from "../../PlayerDOM/PlayerDOM";
 import { scrollData } from "../../PlayerDOM/types";
-import { warnNodeNotFound } from "../../utils";
+import { warnNodeNotFound } from "../../Player/utils";
 
 export function perform(d: scrollData, dom: PlayerDOM) {
     const target = _NFMHandler.getNode(d.id);

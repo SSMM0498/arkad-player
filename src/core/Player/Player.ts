@@ -3,7 +3,7 @@ import PlayerDOM from "../PlayerDOM/PlayerDOM";
 import { _NFMHandler } from "../PlayerDOM/NFMHandler";
 import { addedNodeMutation, Emitter, EventType, eventWithTime, fullCaptureEvent, Handler, metaEvent, missingNodeMap, NodeEncoded, NodeType, playerMetaData, ReplayerEvents, ScrollPosition } from "../PlayerDOM/types";
 import * as mittProxy from 'mitt';
-import { AppendedIframe, isIframeNode, TreeIndex } from "../utils";
+import { AppendedIframe, isIframeNode, TreeIndex } from "./utils";
 import { ActionTimelineScheduler } from "../ActionsHandler/ActionTimeScheduler";
 import { createPlayerService } from "../PlayerStateMachine/PlayerStateMachine";
 import { InputTrigger, performAction, ScrollTrigger } from "../ActionsHandler/ActionsTriggers";
@@ -33,6 +33,8 @@ export default class Player {
         events: eventWithTime[],
         w: HTMLDivElement
     ) {
+        this.turnEventToAction = this.turnEventToAction.bind(this);
+
         // retrieve the recorded events to replay
         this.events = events;
 
@@ -77,7 +79,6 @@ export default class Player {
 
             for (const d of inputMap.values()) { InputTrigger.perform(d); }
         });
-
         this.emitter.on(ReplayerEvents.Resize, this.dom.handleResize as Handler);
     }
 
@@ -129,6 +130,7 @@ export default class Player {
             this.turnEventToAction,
             this.emitter
         );
+
         this.playerSM.start();
         this.playerSM.subscribe((state) => {
             this.emitter.emit(ReplayerEvents.StateChange, {
@@ -267,7 +269,6 @@ export default class Player {
     }
 
     private turnEventToAction(event: eventWithTime, isSync = false) {
-        console.log(this.emitter);
         let castFn: undefined | (() => void);
 
         switch (event.type) {

@@ -1,5 +1,5 @@
-import { _NFMHandler } from "./PlayerDOM/NFMHandler";
-import { addedNodeMutation, attributeMutation, EventType, eventWithTime, incrementalData, IncrementalSource, inputData, mutationData, NodeCaptured, NodeEncoded, NodeType, removedNodeMutation, scrollData, textMutation } from "./PlayerDOM/types";
+import { _NFMHandler } from "../PlayerDOM/NFMHandler";
+import { addedNodeMutation, attributeMutation, EventType, eventWithTime, incrementalData, IncrementalSource, inputData, mutationData, NodeCaptured, NodeEncoded, NodeType, removedNodeMutation, scrollData, textMutation } from "../PlayerDOM/types";
 
 type HTMLIFrameINode = HTMLIFrameElement & {
     _cnode: NodeCaptured

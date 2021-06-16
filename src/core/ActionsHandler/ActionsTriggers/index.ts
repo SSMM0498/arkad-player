@@ -3,7 +3,7 @@ import { _NFMHandler } from '../../PlayerDOM/NFMHandler';
 import PlayerDOM from '../../PlayerDOM/PlayerDOM';
 import { incrementalCaptureEvent, IncrementalSource, MouseInteractions, ReplayerEvents, MediaInteractions, NodeEncoded, Emitter, missingNodeMap } from '../../PlayerDOM/types';
 import { createPlayerService } from '../../PlayerStateMachine/PlayerStateMachine';
-import { TreeIndex, warnNodeNotFound } from '../../utils';
+import { TreeIndex, warnNodeNotFound } from '../../Player/utils';
 import { ActionTimelineScheduler } from '../ActionTimeScheduler';
 import * as InputTrigger from './InputTrigger';
 import * as MouseMovementTrigger from './MouseMovementTrigger';
