@@ -48,17 +48,33 @@
 
         .replayer-mouse {
             position: absolute;
-            width: 20px;
-            height: 20px;
+            width: 29px;
+            height: 29px;
             transition: 0.05s linear;
             background-size: contain;
             background-position: center center;
             background-repeat: no-repeat;
-            background-image: url('data:image/svg+xml;base64,PHN2ZyBoZWlnaHQ9JzMwMHB4JyB3aWR0aD0nMzAwcHgnICBmaWxsPSIjMDAwMDAwIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGRhdGEtbmFtZT0iTGF5ZXIgMSIgdmlld0JveD0iMCAwIDUwIDUwIiB4PSIwcHgiIHk9IjBweCI+PHRpdGxlPkRlc2lnbl90bnA8L3RpdGxlPjxwYXRoIGQ9Ik00OC43MSw0Mi45MUwzNC4wOCwyOC4yOSw0NC4zMywxOEExLDEsMCwwLDAsNDQsMTYuMzlMMi4zNSwxLjA2QTEsMSwwLDAsMCwxLjA2LDIuMzVMMTYuMzksNDRhMSwxLDAsMCwwLDEuNjUuMzZMMjguMjksMzQuMDgsNDIuOTEsNDguNzFhMSwxLDAsMCwwLDEuNDEsMGw0LjM4LTQuMzhBMSwxLDAsMCwwLDQ4LjcxLDQyLjkxWm0tNS4wOSwzLjY3TDI5LDMyYTEsMSwwLDAsMC0xLjQxLDBsLTkuODUsOS44NUwzLjY5LDMuNjlsMzguMTIsMTRMMzIsMjcuNThBMSwxLDAsMCwwLDMyLDI5TDQ2LjU5LDQzLjYyWiI+PC9wYXRoPjwvc3ZnPg==');
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='48' height='48'%3E%3Cpath fill='none' d='M0 0h24v24H0z'/%3E%3Cpath d='M13.91 12.36L17 20.854l-2.818 1.026-3.092-8.494-4.172 3.156 1.49-14.909 10.726 10.463z' fill='rgba(255,255,255,1)' stroke='rgba(0,0,0,1)' stroke-width='1'/%3E%3C/svg%3E");
         }
 
         .replayer-mouse.active::after {
-            animation: click 0.2s ease-in-out 1;
+            animation: click 1s ease-in-out 1;
+        }
+
+        @keyframes click {
+            0% {
+                opacity: 0.3;
+                width: 20px;
+                height: 20px;
+                transform: translate(-10px, -10px);
+            }
+
+            50% {
+                opacity: 0.5;
+                width: 10px;
+                height: 10px;
+                transform: translate(-5px, -5px);
+            }
         }
     </style>
 </head>
@@ -73,20 +89,21 @@
         window.onload = function () {
             const pl = new Player(eventList, aplayer);
             pl.play();
-            // console.log(eventList);
-            // const ifr = document.getElementById("player");
-            // const ifrDoc = ifr.contentWindow.document;
-
-            // const nb = new NodeBuilder(document);
-
-            // const dom = nb.build(build, document);
-
-            // let domJson = dom[0].documentElement.outerHTML;
-
-            // ifrDoc.open('text/html', 'replace');
-            // ifrDoc.write(domJson);
-            // ifrDoc.close();
+            // setTimeout(() => {
+            //     pl.pause();
+            //     setTimeout(() => {
+            //         pl.play();
+            //     }, 2000);
+            // }, 5000);
+            const iframeDoc = document.querySelector(".replayer-iframe").contentDocument;
+            console.log(iframeDoc);
+            iframeDoc.addEventListener('selectionchange', (e) => {
+                const sel = iframeDoc.getSelection();
+                console.log(sel);
+                console.log(e);
+            });
         }
+
     </script>
 </body>
 

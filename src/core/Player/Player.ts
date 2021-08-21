@@ -34,6 +34,9 @@ export default class Player {
         w: HTMLDivElement
     ) {
         this.turnEventToAction = this.turnEventToAction.bind(this);
+        this.storeScrollPosition = this.storeScrollPosition.bind(this);
+        this.restoreScrollPosition = this.restoreScrollPosition.bind(this);
+        this.attachDocumentToIframe = this.attachDocumentToIframe.bind(this);
 
         // retrieve the recorded events to replay
         this.events = events;
@@ -197,12 +200,9 @@ export default class Player {
         }
 
         const collected: AppendedIframe[] = [];
-        const _buildResult = this.NodeBuilder.build(event.data.node, this.dom.iframe.contentDocument, (builtNode) => {
+        _NFMHandler.map = this.NodeBuilder.build(event.data.node, this.dom.iframe.contentDocument, (builtNode) => {
             this.collectIframeAndAttachDocument(collected, builtNode);
-        });
-
-        const _dom = _buildResult[0];
-        _NFMHandler.map = _buildResult[1];
+        })[1];
 
         for (const { mutationInQueue, builtNode } of collected) {
             this.attachDocumentToIframe(mutationInQueue, builtNode);
@@ -210,12 +210,6 @@ export default class Player {
                 (m) => m !== mutationInQueue,
             );
         }
-
-        const domJson = (_dom as HTMLDocument)!.documentElement.outerHTML;
-
-        this.dom.iframe.contentWindow!.document.open('text/html', 'replace');
-        this.dom.iframe.contentWindow!.document.write(domJson);
-        this.dom.iframe.contentWindow!.document.close();
 
         // avoid form submit to refresh the iframe
         this.dom.iframe.contentDocument!.addEventListener('submit', evt => {
@@ -237,20 +231,27 @@ export default class Player {
         mutation: addedNodeMutation,
         iframeEl: HTMLIFrameElement,
     ) {
-        const collected: AppendedIframe[] = [];
-        this.NodeBuilder.buildAllNodes(
-            mutation.node,
-            _NFMHandler.map,
-            iframeEl.contentDocument!,
-            (builtNode) => {
-                this.collectIframeAndAttachDocument(collected, builtNode);
-            },
-        );
-        for (const { mutationInQueue, builtNode } of collected) {
-            this.attachDocumentToIframe(mutationInQueue, builtNode);
-            this.newDocumentQueue = this.newDocumentQueue.filter(
-                (m) => m !== mutationInQueue,
+        iframeEl.onload = () => {
+            // console.log("The iframe is loaded");
+            // console.log(iframeEl.contentDocument!);
+            const collected: AppendedIframe[] = [];
+            
+            this.NodeBuilder.buildAllNodes(
+                mutation.node,
+                _NFMHandler.map,
+                iframeEl.contentDocument!,
+                (builtNode) => {
+                    this.collectIframeAndAttachDocument(collected, builtNode);
+                },
+                true,
             );
+
+            for (const { mutationInQueue, builtNode } of collected) {
+                this.attachDocumentToIframe(mutationInQueue, builtNode);
+                this.newDocumentQueue = this.newDocumentQueue.filter(
+                    (m) => m !== mutationInQueue,
+                );
+            }
         }
     }
 
@@ -258,6 +259,8 @@ export default class Player {
         collected: AppendedIframe[],
         builtNode: NodeEncoded,
     ) {
+        // console.log("iframe");
+        // console.log(builtNode);
         if (isIframeNode(builtNode)) {
             const mutationInQueue = this.newDocumentQueue.find(
                 (m) => m.parentId === builtNode._cnode.nodeId,
@@ -296,10 +299,12 @@ export default class Player {
                         this.emitter,
                         this.dom,
                         this.NodeBuilder,
+                        this.newDocumentQueue,
                         this.fragmentParentMap,
                         this.missingNodeMap,
                         this.storeScrollPosition,
                         this.restoreScrollPosition,
+                        this.attachDocumentToIframe
                     );
                 };
                 break;

@@ -9,7 +9,7 @@ export function perform(d: inputData) {
     }
     try {
         ((target as Node) as HTMLInputElement).checked = d.isChecked;
-        ((target as Node) as HTMLInputElement).value = d.text+"gogol";
+        ((target as Node) as HTMLInputElement).value = d.text;
     } catch (error) {
         // for safe
     }

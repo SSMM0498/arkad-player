@@ -132,6 +132,7 @@ class NodeBuilder {
     ): Node | null {
         switch (currentNode.type) {
             case NodeType.Document:
+                // console.log(currentNode);
                 return doc.implementation.createDocument(null, '', null);
             case NodeType.DocumentType:
                 return doc.implementation.createDocumentType(
@@ -159,9 +160,6 @@ class NodeBuilder {
                             const child = doc.createTextNode(value as string);
                             node.setAttribute('styleSheet', 'text/css');
                             node.appendChild(child);
-                            continue;
-                        }
-                        if (tagName === 'iframe' && name === 'src') {
                             continue;
                         }
                         try {
@@ -203,12 +201,16 @@ class NodeBuilder {
         map: DocumentNodesMap,
         doc: Document,
         afterAppend?: (n: NodeEncoded) => unknown,
+        isIframe: boolean = false
     ): NodeEncoded | null {
+        if (!doc) { console.log('No valid document'); return null;}
+
         let node = this.buildNode(rootNode, doc);
 
         if (!node) {
             return null; // TODO: Check this
         }
+
         // TODO: Check this
         if (rootNode.originId) {
             console.assert(
@@ -247,6 +249,7 @@ class NodeBuilder {
                 // }
 
                 if (afterAppend) {
+                    // console.log(childNode._cnode);
                     afterAppend(childNode);
                 }
             }

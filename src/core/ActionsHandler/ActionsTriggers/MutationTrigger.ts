@@ -1,8 +1,8 @@
 import { _NFMHandler } from "../../PlayerDOM/NFMHandler";
 import NodeBuilder from "../../PlayerDOM/NodeBuilder";
 import PlayerDOM from "../../PlayerDOM/PlayerDOM";
-import { mutationData, missingNodeMap, addedNodeMutation, NodeEncoded } from "../../PlayerDOM/types";
-import { iterateResolveTree, queueToResolveTrees, warnNodeNotFound } from "../../Player/utils";
+import { mutationData, missingNodeMap, addedNodeMutation, NodeEncoded, NodeType } from "../../PlayerDOM/types";
+import { isIframeNode, iterateResolveTree, queueToResolveTrees, warnNodeNotFound } from "../../Player/utils";
 
 export function perform(
     d: mutationData,
@@ -11,8 +11,10 @@ export function perform(
     NodeBuilder: NodeBuilder,
     fragmentParentMap: Map<NodeEncoded, NodeEncoded>,
     missingNodeMap: missingNodeMap,
+    newDocumentQueue: addedNodeMutation[],
     storeScrollPosition: Function,
     resolveMissingNode: Function,
+    attachDocumentToIframe: Function,
 ) {
     d.removes.forEach((mutation) => {
         const target = _NFMHandler.getNode(mutation.id);
@@ -73,6 +75,10 @@ export function perform(
         }
         let parent = _NFMHandler.getNode(mutation.parentId);
         if (!parent) {
+            if (mutation.node.type === NodeType.Document) {
+                // is newly added document, maybe the document node of an iframe
+                return newDocumentQueue.push(mutation);
+            }
             return queue.push(mutation);
         }
 
@@ -111,7 +117,24 @@ export function perform(
             return queue.push(mutation);
         }
 
-        const target = NodeBuilder.buildNode(mutation.node, dom.iframe.contentDocument!) as Node;
+        if (mutation.node.originId && !_NFMHandler.getNode(mutation.node.originId)) {
+            return;
+        }
+
+        const targetDoc = mutation.node.originId
+            ? _NFMHandler.getNode(mutation.node.originId)
+            : dom.iframe.contentDocument!;
+
+        if (isIframeNode(parent)) {
+            attachDocumentToIframe(mutation, parent);
+            return;
+        }
+
+        // if (targetDoc !== null) {
+        const target = NodeBuilder.buildAllNodes(mutation.node, _NFMHandler,(targetDoc as Document)) as NodeEncoded;
+        console.log(target);
+        // }
+
 
         // legacy data, we should not have -1 siblings any more
         if (mutation.previousId === -1 || mutation.nextId === -1) {
@@ -132,6 +155,19 @@ export function perform(
                 : parent.insertBefore(target, null);
         } else {
             parent.appendChild(target);
+        }
+
+        if (isIframeNode(target)) {
+            const mutationInQueue = newDocumentQueue.find(
+                (m) => m.parentId === target._cnode.nodeId,
+            );
+            console.log("queue");
+            if (mutationInQueue) {
+                attachDocumentToIframe(mutationInQueue, target);
+                newDocumentQueue = newDocumentQueue.filter(
+                    (m) => m !== mutationInQueue,
+                );
+            }
         }
 
         if (mutation.previousId || mutation.nextId) {

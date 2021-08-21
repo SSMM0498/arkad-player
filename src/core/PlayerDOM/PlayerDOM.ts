@@ -3,7 +3,7 @@ import NodeBuilder from "./NodeBuilder";
 
 class PlayerDOM {
     public wrapper: HTMLDivElement;
-    public NodeBuilder!: NodeBuilder;
+    // public NodeBuilder!: NodeBuilder;
     public iframe!: HTMLIFrameElement;
     public cursor!: HTMLDivElement;
 
@@ -28,7 +28,7 @@ class PlayerDOM {
         this.wrapper.appendChild(this.iframe);
 
         //  Create a Node Builder
-        this.NodeBuilder = new NodeBuilder(this.iframe)
+        // this.NodeBuilder = new NodeBuilder(this.iframe)
     }
 
     public handleResize(dimension: viewportResizeDimention) {

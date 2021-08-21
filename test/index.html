@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+    <h1>setBaseAndExtent example</h1>
+    <div>
+        <p class="one"><span>Fish</span><span>Dog</span><span>Cat</span><span>Bird</span></p>
+        <p>MIDDLE</p>
+        <p class="two"><span>Car</span><span>Bike</span><span>Boat</span><span>Plane</span></p>
+    </div>
+
+    <div>
+        <p>
+            <label for="aOffset">Anchor offset</label>
+            <input id="aOffset" name="aOffset" type="number" value="0">
+        </p>
+        <p>
+            <label for="fOffset">Focus offset</label>
+            <input id="fOffset" name="fOffset" type="number" value="0">
+        </p>
+        <p><button id="set">Capture selection</button></p>
+        <p><button id="get">Get selection</button></p>
+    </div>
+
+    <p><strong>Output</strong>: <span class="output"></span></p>
+    <script defer>
+        var one, two, aOffset, fOffset;
+
+        var buttonSet = document.querySelector('button#set');
+        var buttonGet = document.querySelector('button#get');
+
+        var output = document.querySelector('.output');
+
+        var selection;
+
+        buttonSet.onclick = function () {
+            try {
+                selection = document.getSelection();
+                selection.setBaseAndExtent(one, aOffset, two, fOffset);
+                var text = selection.toString();
+                output.textContent = text;
+            } catch (e) {
+                output.textContent = e.message;
+            }
+        }
+
+        buttonGet.onclick = function () {
+            try {
+                selection = document.getSelection();
+                var text = selection.toString();
+                output.textContent = text;
+                one = selection.anchorNode;
+                two = selection.focusNode;
+                aOffset = selection.anchorOffset;
+                fOffset = selection.focusOffset;
+                console.log(selection);
+            } catch (e) {
+                output.textContent = e.message;
+            }
+        }
+    </script>
+</body>
+
+</html>

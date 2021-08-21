@@ -1,7 +1,7 @@
 import NodeBuilder from "../../PlayerDOM/NodeBuilder";
 import { _NFMHandler } from '../../PlayerDOM/NFMHandler';
 import PlayerDOM from '../../PlayerDOM/PlayerDOM';
-import { incrementalCaptureEvent, IncrementalSource, MouseInteractions, ReplayerEvents, MediaInteractions, NodeEncoded, Emitter, missingNodeMap } from '../../PlayerDOM/types';
+import { incrementalCaptureEvent, IncrementalSource, MouseInteractions, ReplayerEvents, MediaInteractions, NodeEncoded, Emitter, missingNodeMap, addedNodeMutation } from '../../PlayerDOM/types';
 import { createPlayerService } from '../../PlayerStateMachine/PlayerStateMachine';
 import { TreeIndex, warnNodeNotFound } from '../../Player/utils';
 import { ActionTimelineScheduler } from '../ActionTimeScheduler';
@@ -19,10 +19,12 @@ function performAction(
     emitter: Emitter,
     dom: PlayerDOM,
     NodeBuilder: NodeBuilder,
+    newDocumentQueue: addedNodeMutation[],
     fragmentParentMap: Map<NodeEncoded, NodeEncoded>,
     missingNodeMap: missingNodeMap,
     storeScrollPosition: Function,
     resolveMissingNode: Function,
+    attachDocumentToIframe: Function,
 ) {
     const { data: d } = e;
     switch (d.source) {
@@ -40,8 +42,10 @@ function performAction(
                 NodeBuilder,
                 fragmentParentMap,
                 missingNodeMap,
+                newDocumentQueue,
                 storeScrollPosition,
-                resolveMissingNode
+                resolveMissingNode,
+                attachDocumentToIframe,
             );
             break;
         }
@@ -93,6 +97,7 @@ function performAction(
                     }
                     break;
                 case MouseInteractions.Focus:
+                    // console.log("focus");
                     ((target as Node) as HTMLElement).focus({
                         preventScroll: true,
                     });
@@ -108,6 +113,7 @@ function performAction(
                      * clicked at this moment.
                      */
                     if (!isSync) {
+                        // console.log('click');
                         MouseMovementTrigger.perform(d, d.x, d.y, d.id,dom);
                         dom.cursor.classList.remove('active');
                         // tslint:disable-next-line
