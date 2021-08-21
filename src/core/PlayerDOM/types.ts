@@ -149,7 +149,7 @@ export type mouseInteractionData = {
 
 export type textSelectionData = {
     source: IncrementalSource.TextSelection,
-    selection: Selection
+    selection: selectionValue
 }
 
 export type scrollData = {
@@ -314,6 +314,13 @@ export type viewportResizeDimension = {
 export type inputValue = {
     text: string
     isChecked: boolean
+}
+
+export type selectionValue = {
+    anchorId: number
+    anchorOffset: number
+    focusId: number
+    focusOffset: number
 }
 
 export const enum MediaInteractions {

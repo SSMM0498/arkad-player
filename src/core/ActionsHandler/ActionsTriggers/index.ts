@@ -6,6 +6,7 @@ import { createPlayerService } from '../../PlayerStateMachine/PlayerStateMachine
 import { TreeIndex, warnNodeNotFound } from '../../Player/utils';
 import { ActionTimelineScheduler } from '../ActionTimeScheduler';
 import * as InputTrigger from './InputTrigger';
+import * as TextSelectionTrigger from './TextSelectionTrigger';
 import * as MouseMovementTrigger from './MouseMovementTrigger';
 import * as MutationTrigger from './MutationTrigger';
 import * as ScrollTrigger from './ScrollTrigger';
@@ -162,6 +163,13 @@ function performAction(
                 break;
             }
             InputTrigger.perform(d);
+            break;
+        }
+        case IncrementalSource.TextSelection: {
+            if (d.selection.anchorId === -1 || d.selection.focusId === -1) {
+                break;
+            }
+            TextSelectionTrigger.perform(d, dom);
             break;
         }
         case IncrementalSource.MediaInteraction: {
