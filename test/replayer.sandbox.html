@@ -48,32 +48,29 @@
 
         .replayer-mouse {
             position: absolute;
-            width: 29px;
-            height: 29px;
-            transition: 0.05s linear;
+            width: 24px;
+            height: 24px;
             background-size: contain;
             background-position: center center;
             background-repeat: no-repeat;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='48' height='48'%3E%3Cpath fill='none' d='M0 0h24v24H0z'/%3E%3Cpath d='M13.91 12.36L17 20.854l-2.818 1.026-3.092-8.494-4.172 3.156 1.49-14.909 10.726 10.463z' fill='rgba(255,255,255,1)' stroke='rgba(0,0,0,1)' stroke-width='1'/%3E%3C/svg%3E");
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='24' height='24'%3E%3Cpath fill='none' d='M0 0h24v24H0z'/%3E%3Cpath d='M13.91 12.36L17 20.854l-2.818 1.026-3.092-8.494-4.172 3.156 1.49-14.909 10.726 10.463z' fill='rgba(255,255,255,1)' stroke='rgba(0,0,0,1)' stroke-width='1'/%3E%3C/svg%3E");
         }
 
-        .replayer-mouse.active::after {
-            animation: click 1s ease-in-out 1;
+        .replayer-mouse.active {
+            animation: click .125s ease-in-out;
         }
 
         @keyframes click {
             0% {
-                opacity: 0.3;
-                width: 20px;
-                height: 20px;
-                transform: translate(-10px, -10px);
+                width: 24px;
+                height: 24px;
+                transform: translate(0, 0);
             }
 
             50% {
-                opacity: 0.5;
-                width: 10px;
-                height: 10px;
-                transform: translate(-5px, -5px);
+                width: 20px;
+                height: 20px;
+                transform: translate(-2px, -2px);
             }
         }
     </style>

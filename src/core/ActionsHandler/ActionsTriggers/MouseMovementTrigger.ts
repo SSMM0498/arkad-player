@@ -11,8 +11,8 @@ export function perform(d: incrementalData, x: number, y: number, id: number, do
     }
 
     const base = getBaseDimension(target);
-    const _x = x + base.x;
-    const _y = y + base.y;
+    const _x = x + base.x - 6;
+    const _y = y + base.y - 4;
 
     dom.cursor.style.left = `${_x}px`;
     dom.cursor.style.top = `${_y}px`;
