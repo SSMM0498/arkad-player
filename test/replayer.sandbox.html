@@ -48,16 +48,39 @@
 
         .replayer-mouse {
             position: absolute;
+            display: block;
+            width: 24px;
+            height: 24px;
+        }
+
+        .replayer-mouse::before {
+            content: "";
+            position: absolute;
+            display: block;
+            width: 24px;
+            height: 24px;
+            border-radius: 10px;
+            background: #4950f6;
+            transform: translate(-3px, -12px);
+            /* z-index: -2; */
+            opacity: .5
+        }
+
+        .replayer-mouse::after {
+            content: "";
+            position: absolute;
+            display: block;
             width: 24px;
             height: 24px;
             background-size: contain;
             background-position: center center;
             background-repeat: no-repeat;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='24' height='24'%3E%3Cpath fill='none' d='M0 0h24v24H0z'/%3E%3Cpath d='M13.91 12.36L17 20.854l-2.818 1.026-3.092-8.494-4.172 3.156 1.49-14.909 10.726 10.463z' fill='rgba(255,255,255,1)' stroke='rgba(0,0,0,1)' stroke-width='1'/%3E%3C/svg%3E");
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='24' height='24'%3E%3Cpath fill='none' d='M0 0h24v24H0z'/%3E%3Cpath d='M 14.554217,12.207521 16.670298,18.025795 13.8523,19.051796 11.734187,13.233532 7.5622157,16.389519 9.0522155,1.4805211 19.778215,11.94352 Z' fill='rgba(255,255,255,1)' stroke='rgba(0,0,0,1)' stroke-width='1'/%3E%3C/svg%3E");
         }
 
-        .replayer-mouse.active {
-            animation: click .125s ease-in-out;
+        .replayer-mouse.active::before,
+        .replayer-mouse.active::after {
+            animation: click .25s ease-in-out;
         }
 
         @keyframes click {
@@ -80,24 +103,16 @@
     <div id="arkastplayer"></div>
     <script type="module">
         import { Player } from "../dist/arkad-player.js";
-        import eventList from './arkast/arkast.js';
+        import eventList from './arkast/uploads/arkast.js';
         const aplayer = document.getElementById("arkastplayer");
 
         window.onload = function () {
             const pl = new Player(eventList, aplayer);
             pl.play();
-            // setTimeout(() => {
-            //     pl.pause();
-            //     setTimeout(() => {
-            //         pl.play();
-            //     }, 2000);
-            // }, 5000);
+
             const iframeDoc = document.querySelector(".replayer-iframe").contentDocument;
-            console.log(iframeDoc);
             iframeDoc.addEventListener('selectionchange', (e) => {
                 const sel = iframeDoc.getSelection();
-                console.log(sel);
-                console.log(e);
             });
         }
 

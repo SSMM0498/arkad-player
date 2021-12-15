@@ -5,3 +5,5 @@ build/
 dist/
 test/arkast/
 player.code-workspace
+bug.todo
+todo.todo
