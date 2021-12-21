@@ -25,13 +25,13 @@ export default class Player {
     private elementScrollPosition = new Map<NodeEncoded, ScrollPosition>();  // store scroll position of element while fast-forward
 
     private emitter: Emitter = mitt();
-    private playerSM!: ReturnType<typeof createPlayerService>;
+    public playerSM!: ReturnType<typeof createPlayerService>;
 
     private newDocumentQueue: addedNodeMutation[] = [];
 
     constructor(
-        events: eventWithTime[],
-        w: HTMLDivElement
+        events: eventWithTime[] = [],
+        w ?: HTMLDivElement
     ) {
         this.turnEventToAction = this.turnEventToAction.bind(this);
         this.storeScrollPosition = this.storeScrollPosition.bind(this);
@@ -42,7 +42,7 @@ export default class Player {
         this.events = events;
 
         // initialize the main classes
-        this.initUtils(w);
+        if (w) this.initUtils(w);
 
         // set all handlers for events sent to the emitter
         this.setEmitterHandlers();
@@ -50,6 +50,14 @@ export default class Player {
         // rebuild first full snapshot as the poster of the player
         // maybe we can cache it for performance optimization
         this.setPlayerPoster();
+    }
+
+    public setEventWithTime(events: eventWithTime[]) {
+        this.events = events;
+    }
+    
+    public setWrapper(w: HTMLDivElement) {
+        this.initUtils(w);
     }
 
     private setEmitterHandlers() {

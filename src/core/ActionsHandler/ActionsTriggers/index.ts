@@ -8,6 +8,7 @@ import { ActionTimelineScheduler } from '../ActionTimeScheduler';
 import * as InputTrigger from './InputTrigger';
 import * as TextSelectionTrigger from './TextSelectionTrigger';
 import * as MouseMovementTrigger from './MouseMovementTrigger';
+import * as MouseIconChangementTrigger from './MouseIconChangementTrigger';
 import * as MutationTrigger from './MutationTrigger';
 import * as ScrollTrigger from './ScrollTrigger';
 
@@ -72,6 +73,13 @@ function performAction(
                     doAction() { },
                     delay: e.delay! - d.positions[0]?.timeOffset,
                 });
+            }
+            break;
+        }
+        case IncrementalSource.MouseIconChangement: {
+            if (!isSync) {
+                // console.log('click');
+                MouseIconChangementTrigger.perform(d, dom);
             }
             break;
         }

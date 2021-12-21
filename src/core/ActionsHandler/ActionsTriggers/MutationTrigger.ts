@@ -75,6 +75,7 @@ export function perform(
         }
         let parent = _NFMHandler.getNode(mutation.parentId);
         if (!parent) {
+            if (!mutation.node) return;
             if (mutation.node.type === NodeType.Document) {
                 // is newly added document, maybe the document node of an iframe
                 return newDocumentQueue.push(mutation);

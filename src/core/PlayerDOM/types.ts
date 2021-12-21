@@ -120,9 +120,10 @@ export type metaEvent = {
 /**
  * Type of event which triggered the incremental capture
  */
-export enum IncrementalSource {
+ export enum IncrementalSource {
     Mutation,
     MouseMove,
+    MouseIconChangement,
     MouseInteraction,
     Scroll,
     ViewportResize,
@@ -142,6 +143,10 @@ export type mousemoveData = {
     source: IncrementalSource.MouseMove | IncrementalSource.TouchMove
     positions: mousePosition[]
 }
+
+export type mouseIconChangementData = {
+    source: IncrementalSource.MouseIconChangement
+} & mouseIconChangementParam
 
 export type mouseInteractionData = {
     source: IncrementalSource.MouseInteraction
@@ -183,6 +188,7 @@ export type consoleData = {
 export type incrementalData =
     | mutationData
     | mousemoveData
+    | mouseIconChangementData
     | mouseInteractionData
     | scrollData
     | viewportResizeData
@@ -278,11 +284,48 @@ export enum MouseInteractions {
     TouchEnd,
 }
 
+export enum MouseIcon {
+    Default,
+    Alias,
+    AllScroll,
+    Cell,
+    ColResize,
+    ContextMenu,
+    Copy,
+    Crosshair,
+    EResize,
+    Grab,
+    Grabbing,
+    Help,
+    Move,
+    NResize,
+    NEResize,
+    NESWResize,
+    NoDrop,
+    None,
+    NotAllowed,
+    NSResize,
+    NWResize,
+    Pointer,
+    Progress,
+    RowResize,
+    Text,
+    VerticalText,
+    Wait,
+    ZoomIn,
+    ZoomOut,
+}
+
 type mouseInteractionParam = {
     type: MouseInteractions
     id: number
     x: number
     y: number
+}
+
+type mouseIconChangementParam = {
+    type: MouseIcon
+    payload?: any
 }
 
 export type scrollPosition = {
@@ -316,7 +359,14 @@ export type inputValue = {
     isChecked: boolean
 }
 
+export enum SelectionType {
+    caret,
+    range
+}
+
 export type selectionValue = {
+    type: SelectionType
+    caretPosition?: number
     anchorId: number
     anchorOffset: number
     focusId: number
