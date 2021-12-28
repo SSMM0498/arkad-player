@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Player</title>
+    <link rel="stylesheet" href="mouse.css">
     <style>
         * {
             margin: 0;
@@ -44,61 +45,6 @@
 
         .replayer-iframe {
             border: none;
-        }
-
-        .replayer-mouse {
-            position: absolute;
-            display: block;
-            width: 24px;
-            height: 24px;
-        }
-
-        .replayer-mouse::before {
-            content: "";
-            position: absolute;
-            display: block;
-            width: 24px;
-            height: 24px;
-            border-radius: 10px;
-            background: #4950f6;
-            transform: translate(-3px, -12px);
-            /* z-index: -2; */
-            opacity: .5
-        }
-
-        .replayer-mouse::after {
-            content: "";
-            position: absolute;
-            display: block;
-            width: 24px;
-            height: 24px;
-            background-size: contain;
-            background-position: center center;
-            background-repeat: no-repeat;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='24' height='24'%3E%3Cpath fill='none' d='M0 0h24v24H0z'/%3E%3Cpath d='M 14.554217,12.207521 16.670298,18.025795 13.8523,19.051796 11.734187,13.233532 7.5622157,16.389519 9.0522155,1.4805211 19.778215,11.94352 Z' fill='rgba(255,255,255,1)' stroke='rgba(0,0,0,1)' stroke-width='1'/%3E%3C/svg%3E");
-        }
-        
-        .replayer-mouse.active::before,
-        .replayer-mouse.active::after {
-            animation: click .125s ease-in-out;
-        }
-        
-        .replayer-mouse.grab::after {
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='24' height='24'%3E%3Cpath fill='none' d='M0 0h24v24H0z'/%3E%3Cpath d='M12 2l4.243 4.243-1.415 1.414L12 4.828 9.172 7.657 7.757 6.243 12 2zM2 12l4.243-4.243 1.414 1.415L4.828 12l2.829 2.828-1.414 1.415L2 12zm20 0l-4.243 4.243-1.414-1.415L19.172 12l-2.829-2.828 1.414-1.415L22 12zm-10 2a2 2 0 1 1 0-4 2 2 0 0 1 0 4zm0 8l-4.243-4.243 1.415-1.414L12 19.172l2.828-2.829 1.415 1.414L12 22z' fill='rgba(255,255,255,1)' stroke='rgba(0,0,0,1)' stroke-width='1'/%3E%3C/svg%3E");
-        }
-
-        @keyframes click {
-            0% {
-                width: 24px;
-                height: 24px;
-                transform: translate(0, 0);
-            }
-
-            50% {
-                width: 20px;
-                height: 20px;
-                transform: translate(-2px, -2px);
-            }
         }
     </style>
 </head>

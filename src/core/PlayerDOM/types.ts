@@ -123,7 +123,7 @@ export type metaEvent = {
  export enum IncrementalSource {
     Mutation,
     MouseMove,
-    MouseIconChangement,
+    CursorChangement,
     MouseInteraction,
     Scroll,
     ViewportResize,
@@ -144,9 +144,9 @@ export type mousemoveData = {
     positions: mousePosition[]
 }
 
-export type mouseIconChangementData = {
-    source: IncrementalSource.MouseIconChangement
-} & mouseIconChangementParam
+export type cursorChangementData = {
+    source: IncrementalSource.CursorChangement
+} & cursorChangementParam
 
 export type mouseInteractionData = {
     source: IncrementalSource.MouseInteraction
@@ -188,7 +188,7 @@ export type consoleData = {
 export type incrementalData =
     | mutationData
     | mousemoveData
-    | mouseIconChangementData
+    | cursorChangementData
     | mouseInteractionData
     | scrollData
     | viewportResizeData
@@ -284,36 +284,46 @@ export enum MouseInteractions {
     TouchEnd,
 }
 
-export enum MouseIcon {
-    Default,
-    Alias,
-    AllScroll,
-    Cell,
-    ColResize,
-    ContextMenu,
-    Copy,
-    Crosshair,
-    EResize,
-    Grab,
-    Grabbing,
-    Help,
-    Move,
-    NResize,
-    NEResize,
-    NESWResize,
-    NoDrop,
-    None,
-    NotAllowed,
-    NSResize,
-    NWResize,
-    Pointer,
-    Progress,
-    RowResize,
-    Text,
-    VerticalText,
-    Wait,
-    ZoomIn,
-    ZoomOut,
+export enum Cursor {
+    Default = "default",
+    Alias = "alias",
+    AllScroll = "all-scroll",
+    Cell = "cell",
+    ColResize = "col-resize",
+    ContextMenu = "context-menu",
+    Copy = "copy",
+    Crosshair = "crosshair",
+    Grab = "grab",
+    Grabbing = "grabbing",
+    Help = "help",
+    Move = "move",
+    NoDrop = "no-drop",
+    None = "none",
+    NotAllowed = "not-allowed",
+    Pointer = "pointer",
+    Progress = "progress",
+    RowResize = "row-resize",
+    Text = "text",
+    VerticalText = "vertical-text",
+    Wait = "wait",
+    ZoomIn = "zoom-in",
+    ZoomOut = "zoom-out",
+    
+    /* ------ BIDIRECTIONAL - RESIZE ------ */
+    EWResize = "ew-resize",
+    NSResize = "ns-resize",
+    NESWResize = "nesw-resize",
+    NWSEResize = "nwse-resize",
+    
+    /* ------ UNIDIRECTIONAL - RESIZE ------ */
+    NResize = "n-resize",
+    EResize = "e-resize",
+    SResize = "s-resize",
+    WResize = "w-resize",
+    NEResize = "ne-resize",
+    NWResize = "nw-resize",
+    SEResize = "se-resize",
+    SWResize = "sw-resize",
 }
 
 type mouseInteractionParam = {
@@ -323,8 +333,8 @@ type mouseInteractionParam = {
     y: number
 }
 
-type mouseIconChangementParam = {
-    type: MouseIcon
+type cursorChangementParam = {
+    type: Cursor
     payload?: any
 }
 

@@ -8,7 +8,7 @@ import { ActionTimelineScheduler } from '../ActionTimeScheduler';
 import * as InputTrigger from './InputTrigger';
 import * as TextSelectionTrigger from './TextSelectionTrigger';
 import * as MouseMovementTrigger from './MouseMovementTrigger';
-import * as MouseIconChangementTrigger from './MouseIconChangementTrigger';
+import * as CursorChangementTrigger from './CursorChangementTrigger';
 import * as MutationTrigger from './MutationTrigger';
 import * as ScrollTrigger from './ScrollTrigger';
 
@@ -76,10 +76,10 @@ function performAction(
             }
             break;
         }
-        case IncrementalSource.MouseIconChangement: {
+        case IncrementalSource.CursorChangement: {
             if (!isSync) {
                 // console.log('click');
-                MouseIconChangementTrigger.perform(d, dom);
+                CursorChangementTrigger.perform(d, dom);
             }
             break;
         }

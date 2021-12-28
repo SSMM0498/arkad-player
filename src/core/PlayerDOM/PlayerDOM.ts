@@ -1,4 +1,4 @@
-import { viewportResizeDimention } from "./types";
+import { Cursor, viewportResizeDimention } from "./types";
 import NodeBuilder from "./NodeBuilder";
 
 class PlayerDOM {
@@ -6,6 +6,7 @@ class PlayerDOM {
     // public NodeBuilder!: NodeBuilder;
     public iframe!: HTMLIFrameElement;
     public cursor!: HTMLDivElement;
+    public currentCursor!: Cursor;
 
     constructor(w: HTMLDivElement) {
         this.wrapper = w;
@@ -19,6 +20,9 @@ class PlayerDOM {
         //  Set up virtual mouse
         this.cursor = document.createElement("div");
         this.cursor.classList.add("replayer-mouse");
+        const cursorLight = document.createElement("div");
+        cursorLight.classList.add("replayer-mouse-light");
+        this.cursor.appendChild(cursorLight);
         this.wrapper.appendChild(this.cursor);
 
         //  Set up player iframe
