@@ -381,6 +381,10 @@ export type selectionValue = {
     anchorOffset: number
     focusId: number
     focusOffset: number
+} | {
+    focusId: number
+    selectionStart: number
+    selectionEnd: number
 }
 
 export type caretPositionValue = {
