@@ -132,6 +132,7 @@ export type metaEvent = {
     MediaInteraction,
     StyleSheetRule,
     TextSelection,
+    CaretPosition,
     Console
 }
 
@@ -155,6 +156,11 @@ export type mouseInteractionData = {
 export type textSelectionData = {
     source: IncrementalSource.TextSelection,
     selection: selectionValue
+}
+
+export type caretPositionData = {
+    source: IncrementalSource.CaretPosition,
+    caretInfos: caretPositionValue
 }
 
 export type scrollData = {
@@ -196,6 +202,7 @@ export type incrementalData =
     | mediaInteractionData
     | styleSheetRuleData
     | textSelectionData
+    | caretPositionData
     | consoleData
 
 export type event =
@@ -369,18 +376,16 @@ export type inputValue = {
     isChecked: boolean
 }
 
-export enum SelectionType {
-    caret,
-    range
-}
-
 export type selectionValue = {
-    type: SelectionType
-    caretPosition?: number
     anchorId: number
     anchorOffset: number
     focusId: number
     focusOffset: number
+}
+
+export type caretPositionValue = {
+    focusId: number
+    offset: number
 }
 
 export const enum MediaInteractions {

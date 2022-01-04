@@ -7,6 +7,7 @@ import { TreeIndex, warnNodeNotFound } from '../../Player/utils';
 import { ActionTimelineScheduler } from '../ActionTimeScheduler';
 import * as InputTrigger from './InputTrigger';
 import * as TextSelectionTrigger from './TextSelectionTrigger';
+import * as CaretPositionTrigger from './CaretPositionTrigger';
 import * as MouseMovementTrigger from './MouseMovementTrigger';
 import * as CursorChangementTrigger from './CursorChangementTrigger';
 import * as MutationTrigger from './MutationTrigger';
@@ -178,6 +179,13 @@ function performAction(
                 break;
             }
             TextSelectionTrigger.perform(d, dom);
+            break;
+        }
+        case IncrementalSource.CaretPosition: {
+            if (d.caretInfos.focusId === -1) {
+                break;
+            }
+            CaretPositionTrigger.perform(d, dom);
             break;
         }
         case IncrementalSource.MediaInteraction: {

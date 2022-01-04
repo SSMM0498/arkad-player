@@ -4,7 +4,7 @@ import { Cursor, cursorChangementData } from "../../PlayerDOM/types";
 export function perform(d: cursorChangementData, dom: PlayerDOM) {
     resetCursor(dom);
     dom.currentCursor = d.type;
-    console.log(dom.currentCursor);
+    // console.log(dom.currentCursor);
     switch (d.type) {
         case Cursor.Alias:
         case Cursor.AllScroll:
