@@ -6,3 +6,4 @@ test/arkast/
 player.code-workspace
 bug.todo
 todo.todo
+src/view/src/components/old/*

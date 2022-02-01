@@ -10,7 +10,7 @@ export function perform(d: incrementalData, x: number, y: number, id: number, do
     }
 
     const base = getBaseDimension(target, dom.iframe);
-    console.log(base);
+    // console.log(base);
     const _x = x * base.absoluteScale + base.x;
     const _y = y * base.absoluteScale + base.y;
 
@@ -40,7 +40,7 @@ export function getBaseDimension(
     rootIframe: Node,
 ): DocumentDimension {
     const frameElement = node.ownerDocument?.defaultView?.frameElement;
-    console.log(frameElement);
+    // console.log(frameElement);
     
     if (!frameElement || frameElement === rootIframe) {
         return {
