@@ -1,6 +1,5 @@
 node_modules/
 _core/
-view/
 build/
 dist/
 test/arkast/
