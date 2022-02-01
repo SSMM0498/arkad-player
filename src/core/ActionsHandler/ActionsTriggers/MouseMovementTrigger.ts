@@ -4,7 +4,6 @@ import { DocumentDimension, incrementalData } from "../../PlayerDOM/types";
 import { warnNodeNotFound } from "../../Player/utils";
 
 export function perform(d: incrementalData, x: number, y: number, id: number, dom: PlayerDOM) {
-
     const target = _NFMHandler.getNode(id);
     if (!target) {
         return warnNodeNotFound(d, id);

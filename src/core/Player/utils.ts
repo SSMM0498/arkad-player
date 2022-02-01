@@ -8,7 +8,7 @@ type HTMLIFrameINode = HTMLIFrameElement & {
 const REPLAY_CONSOLE_PREFIX = '[replayer]';
 
 export function warnNodeNotFound(d: incrementalData, id: number) {
-    console.warn(
+    console.trace(
         REPLAY_CONSOLE_PREFIX,
         `target with id '${id}' not found in`,
         d,

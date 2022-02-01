@@ -1,8 +1,19 @@
 import { _NFMHandler } from "../../PlayerDOM/NFMHandler";
 import NodeBuilder from "../../PlayerDOM/NodeBuilder";
 import PlayerDOM from "../../PlayerDOM/PlayerDOM";
-import { mutationData, missingNodeMap, addedNodeMutation, NodeEncoded, NodeType } from "../../PlayerDOM/types";
-import { isIframeNode, iterateResolveTree, queueToResolveTrees, warnNodeNotFound } from "../../Player/utils";
+import {
+    mutationData,
+    missingNodeMap,
+    addedNodeMutation,
+    NodeEncoded,
+    NodeType,
+} from "../../PlayerDOM/types";
+import {
+    isIframeNode,
+    iterateResolveTree,
+    queueToResolveTrees,
+    warnNodeNotFound,
+} from "../../Player/utils";
 
 export function perform(
     d: mutationData,
@@ -14,7 +25,7 @@ export function perform(
     newDocumentQueue: addedNodeMutation[],
     storeScrollPosition: Function,
     resolveMissingNode: Function,
-    attachDocumentToIframe: Function,
+    attachDocumentToIframe: Function
 ) {
     d.removes.forEach((mutation) => {
         const target = _NFMHandler.getNode(mutation.id);
@@ -71,7 +82,7 @@ export function perform(
 
     const appendNode = (mutation: addedNodeMutation) => {
         if (!dom.iframe.contentDocument) {
-            return console.warn('Looks like your replayer has been destroyed.');
+            return console.warn("Looks like your replayer has been destroyed.");
         }
         let parent = _NFMHandler.getNode(mutation.parentId);
         if (!parent) {
@@ -93,7 +104,8 @@ export function perform(
         }
 
         if (useVirtualParent && parentInDocument) {
-            const virtualParent = (document.createDocumentFragment() as unknown) as NodeEncoded;
+            const virtualParent =
+                document.createDocumentFragment() as unknown as NodeEncoded;
             _NFMHandler.map[mutation.parentId] = virtualParent;
             fragmentParentMap.set(virtualParent, parent);
 
@@ -118,7 +130,10 @@ export function perform(
             return queue.push(mutation);
         }
 
-        if (mutation.node.originId && !_NFMHandler.getNode(mutation.node.originId)) {
+        if (
+            mutation.node.originId &&
+            !_NFMHandler.getNode(mutation.node.originId)
+        ) {
             return;
         }
 
@@ -131,57 +146,60 @@ export function perform(
             return;
         }
 
-        // if (targetDoc !== null) {
-        const target = NodeBuilder.buildAllNodes(mutation.node, _NFMHandler,(targetDoc as Document)) as NodeEncoded;
-        console.log(target);
-        // }
+        if (targetDoc !== null) {
+            console.log(`mutation : ${mutation}`);
+            console.log(`targetDoc : ${targetDoc}`);
+            console.log(`mutation node : ${mutation.node.nodeId}`);
+            const target = NodeBuilder.buildAllNodes(
+                mutation.node,
+                _NFMHandler,
+                targetDoc as Document
+            ) as NodeEncoded;
+            console.log(target);
 
+            if (!target) return;
 
-        // legacy data, we should not have -1 siblings any more
-        if (mutation.previousId === -1 || mutation.nextId === -1) {
-            legacy_missingNodeMap[mutation.node.nodeId] = {
-                node: target,
-                mutation,
-            };
-            return;
-        }
-
-        if (previous && previous.nextSibling && previous.nextSibling.parentNode) {
-            parent.insertBefore(target, previous.nextSibling);
-        } else if (next && next.parentNode) {
-            // making sure the parent contains the reference nodes
-            // before we insert target before next.
-            parent.contains(next)
-                ? parent.insertBefore(target, next)
-                : parent.insertBefore(target, null);
-        } else {
-            parent.appendChild(target);
-        }
-
-        if (isIframeNode(target)) {
-            const mutationInQueue = newDocumentQueue.find(
-                (m) => m.parentId === target._cnode.nodeId,
-            );
-            console.log("queue");
-            if (mutationInQueue) {
-                attachDocumentToIframe(mutationInQueue, target);
-                newDocumentQueue = newDocumentQueue.filter(
-                    (m) => m !== mutationInQueue,
-                );
+            // legacy data, we should not have -1 siblings any more
+            if (mutation.previousId === -1 || mutation.nextId === -1) {
+                legacy_missingNodeMap[mutation.node.nodeId] = {
+                    node: target,
+                    mutation,
+                };
+                return;
             }
-        }
 
-        if (mutation.previousId || mutation.nextId) {
-            resolveMissingNode(
-                legacy_missingNodeMap,
-                parent,
-                target,
-                mutation,
-            );
+            if (previous && previous.nextSibling && previous.nextSibling.parentNode) {
+                parent.insertBefore(target, previous.nextSibling);
+            } else if (next && next.parentNode) {
+                // making sure the parent contains the reference nodes
+                // before we insert target before next.
+                parent.contains(next)
+                    ? parent.insertBefore(target, next)
+                    : parent.insertBefore(target, null);
+            } else {
+                parent.appendChild(target);
+            }
+
+            if (isIframeNode(target)) {
+                const mutationInQueue = newDocumentQueue.find(
+                    (m) => m.parentId === target._cnode.nodeId
+                );
+                console.log("queue");
+                if (mutationInQueue) {
+                    attachDocumentToIframe(mutationInQueue, target);
+                    newDocumentQueue = newDocumentQueue.filter(
+                        (m) => m !== mutationInQueue
+                    );
+                }
+            }
+
+            if (mutation.previousId || mutation.nextId) {
+                resolveMissingNode(legacy_missingNodeMap, parent, target, mutation);
+            }
         }
     };
 
-    d.adds.forEach(mutation => appendNode(mutation));
+    d.adds.forEach((mutation) => appendNode(mutation));
 
     let startTime = Date.now();
     while (queue.length) {
@@ -224,17 +242,15 @@ export function perform(
             target = fragmentParentMap.get(target)!;
         }
         for (const attributeName in mutation.attributes) {
-            if (typeof attributeName === 'string') {
+            if (typeof attributeName === "string") {
                 const value = mutation.attributes[attributeName];
                 try {
                     if (value !== null) {
-                        ((target as Node) as Element).setAttribute(attributeName, value);
+                        (target as Node as Element).setAttribute(attributeName, value);
                     } else {
-                        ((target as Node) as Element).removeAttribute(attributeName);
+                        (target as Node as Element).removeAttribute(attributeName);
                     }
-                } catch (error) {
-
-                }
+                } catch (error) { }
             }
         }
     });
