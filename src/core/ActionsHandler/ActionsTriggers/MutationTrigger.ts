@@ -147,15 +147,15 @@ export function perform(
         }
 
         if (targetDoc !== null) {
-            console.log(`mutation : ${mutation}`);
-            console.log(`targetDoc : ${targetDoc}`);
-            console.log(`mutation node : ${mutation.node.nodeId}`);
+            // console.log(`mutation : ${mutation}`);
+            // console.log(`targetDoc : ${targetDoc}`);
+            // console.log(`mutation node : ${mutation.node.nodeId}`);
             const target = NodeBuilder.buildAllNodes(
                 mutation.node,
                 _NFMHandler,
                 targetDoc as Document
             ) as NodeEncoded;
-            console.log(target);
+            // console.log(target);
 
             if (!target) return;
 
@@ -184,7 +184,7 @@ export function perform(
                 const mutationInQueue = newDocumentQueue.find(
                     (m) => m.parentId === target._cnode.nodeId
                 );
-                console.log("queue");
+                // console.log("queue");
                 if (mutationInQueue) {
                     attachDocumentToIframe(mutationInQueue, target);
                     newDocumentQueue = newDocumentQueue.filter(

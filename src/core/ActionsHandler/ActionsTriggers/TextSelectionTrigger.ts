@@ -12,7 +12,7 @@ export function perform(d: textSelectionData, dom: PlayerDOM) {
     
         if (!anchorNode) { return warnNodeNotFound(d, d.selection.anchorId); }
     
-        console.log(focusNode);
+        // console.log(focusNode);
     
         try {
             if (!dom.iframe.contentDocument) {

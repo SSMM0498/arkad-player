@@ -32,8 +32,8 @@
 .replayer-mouse::before {
     content: "";
     position: absolute;
-    top: 14px;
-    left: 14px;
+    top: -140px;
+    left: -140px;
     display: block;
     width: 14px;
     height: 14px;
@@ -187,8 +187,8 @@
     }
 
     50% {
-        width: 20px;
-        height: 20px;
+        width: 22px;
+        height: 22px;
         transform: translate(-2px, -2px);
     }
 }

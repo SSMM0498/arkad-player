@@ -8,8 +8,7 @@ export const _NFMHandler: NodeEncodedMapHandler = {
         if (!n._cnode) { return -1 }
         return n._cnode.nodeId
     },
-    getNode(id) { if (id === 33) console.log(_NFMHandler.map);
-     return _NFMHandler.map[id] || null },
+    getNode(id) { return _NFMHandler.map[id] || null },
 
     removeNodeFromMap(n) {
         const id = n._cnode && n._cnode.nodeId
